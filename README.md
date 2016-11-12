@@ -9,6 +9,8 @@
 
 Complete high-level Haskell binding to libFLAC. This is a work in progress.
 
+NB Ogg FLAC is not supported.
+
 ## License
 
 Copyright © 2016 Mark Karpov
