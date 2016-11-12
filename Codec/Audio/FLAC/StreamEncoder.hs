@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC.Encoder
+-- Module      :  Codec.Audio.FLAC.StreamEncoder
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -9,6 +9,9 @@
 --
 -- Interface to stream encoder.
 
-module Codec.Audio.FLAC.Encoder
+module Codec.Audio.FLAC.StreamEncoder
   (  )
 where
+
+-- https://xiph.org/flac/api/group__flac__stream__encoder.html
+-- Work with files, encode directly from a file.

@@ -59,10 +59,13 @@ library
   build-depends:      base             >= 4.7 && < 5.0
   extra-libraries:    FLAC
   exposed-modules:    Codec.Audio.FLAC
-                    , Codec.Audio.FLAC.Decoder
-                    , Codec.Audio.FLAC.Encoder
                     , Codec.Audio.FLAC.Metadata
+                    , Codec.Audio.FLAC.StreamDecoder
+                    , Codec.Audio.FLAC.StreamEncoder
                     , Codec.Audio.FLAC.Type
+  other-modules:      Codec.Audio.FLAC.Metadata.Internal
+                    , Codec.Audio.FLAC.StreamDecoder.Internal
+                    , Codec.Audio.FLAC.StreamEncoder.Internal
   if flag(dev)
     ghc-options:      -Wall -Werror
   else
