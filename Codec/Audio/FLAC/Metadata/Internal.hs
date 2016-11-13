@@ -16,8 +16,8 @@ module Codec.Audio.FLAC.Metadata.Internal
     MetaChain
   , MetaIterator
   , MetaChainStatus (..)
-  , Metadata
-  , MetadataData
+  , MetadataType
+  , Metadata (..)
     -- * Chain
   , chainNew
   , chainDelete
@@ -31,19 +31,28 @@ module Codec.Audio.FLAC.Metadata.Internal
   , iteratorInit
   , iteratorNext
   , iteratorPrev
-  -- , iteratorGetBlockType
-  , iteratorGetBlock
+  , iteratorGetBlockType
+  -- , iteratorGetBlock
+  , iteratorSetBlock
   , iteratorDeleteBlock
   , iteratorInsertBlockBefore
-  , iteratorInsertBlockAfter )
+  , iteratorInsertBlockAfter
+    -- * Inspecting metadata blocks
+  , view
+  )
 where
 
+import Control.Monad
+import Data.ByteString (ByteString)
+import Data.Maybe (fromJust)
+import Data.Proxy
 import Data.Void
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import Foreign.Ptr
 import Unsafe.Coerce
+import qualified Data.ByteArray     as BA
+import qualified Data.Memory.Endian as E
 
 ----------------------------------------------------------------------------
 -- Types
@@ -91,23 +100,31 @@ data MetaChainStatus
     -- callbacks).
   | MetaChainStatusWrongWriteCall
     -- ^ Should not ever happen when you use this binding.
-  deriving (Eq, Ord, Bounded, Enum)
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
-data Metadata = Metadata
-  { metadataIsLast :: Bool
-  , metadataLength :: Word
-  , metadataData   :: MetadataData
-  }
+data MetadataType
+  = StreamInfoType
+  | PaddingType
+  | ApplicationType
+  | SeektableType
+  | VorbisCommentType
+  | CueSheetType
+  | PictureType
+  | UndefinedType
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
-data MetadataData -- FIXME
-  = StreamInfo
+data Metadata
+  = StreamInfo Word32 Word32 Word32 Word64 ByteString
   | Padding
   | Application
   | SeekTable
   | VorbisComment
   | CueSheet
   | Picture
-  | Unknown
+  | Undefined
+
+-- instance Storable Metadata where
+  -- TODO
 
 ----------------------------------------------------------------------------
 -- Chain
@@ -228,11 +245,32 @@ iteratorPrev = fmap toEnum' . c_iterator_prev
 foreign import ccall unsafe "FLAC__metadata_iterator_prev"
   c_iterator_prev :: MetaIterator -> IO CInt
 
--- iteratorGetBlockType :: MetaIterator -> IO MetadataType
--- iteratorGetBlockType = undefined -- TODO FLAC__metadata_iterator_get_block_type
+-- | Get the type of the metadata block at the current position. Useful for
+-- fast searching.
 
-iteratorGetBlock :: MetaIterator -> IO (Maybe Metadata)
-iteratorGetBlock = undefined -- TODO FLAC__metadata_iterator_get_block
+iteratorGetBlockType :: MetaIterator -> IO MetadataType
+iteratorGetBlockType = fmap toEnum' . c_iterator_get_block_type
+
+foreign import ccall unsafe "FLAC__metadata_iterator_get_block_type"
+  c_iterator_get_block_type :: MetaIterator -> IO CUInt
+
+-- | Get the 'Metadata' block at the current position.
+
+-- iteratorGetBlock :: MetaIterator -> IO Metadata
+-- iteratorGetBlock = c_iterator_get_block >=> peekMetadata
+
+foreign import ccall unsafe "FLAC__metadata_iterator_get_block"
+  c_iterator_get_block :: MetaIterator -> IO (Ptr Metadata)
+
+-- | Write given 'Metadata' block at position pointed to by 'MetaIterator'
+-- replacing existing block.
+
+iteratorSetBlock :: MetaIterator -> Metadata -> IO Bool
+iteratorSetBlock = undefined -- TODO proper way to write Metadata, the new
+-- block becomes owned by chain and it will be deleted when the chain is deleted
+
+foreign import ccall unsafe "FLAC__metadata_iterator_set_block"
+  c_iterator_set_block :: MetaIterator -> Ptr Metadata -> IO Bool
 
 -- | Remove the current block from the chain.
 
@@ -246,11 +284,40 @@ iteratorDeleteBlock iterator replaceWithPadding = toEnum' <$>
 foreign import ccall unsafe "FLAC__metadata_iterator_delete_block"
   c_iterator_delete_block :: MetaIterator -> CInt -> IO CInt
 
+-- | Insert a new 'Metadata' block before the current block. You cannot
+-- insert a block before the first 'StreamInfo' block. You cannot insert a
+-- 'StreamInfo' block as there can be only one, the one that already exists
+-- at the head when you read in a chain. The chain takes ownership of the
+-- new block and it will be deleted when the chain is deleted. The iterator
+-- will be left pointing to the new block.
+--
+-- The function returns 'False' if something went wrong.
+
 iteratorInsertBlockBefore :: MetaIterator -> Metadata -> IO Bool
 iteratorInsertBlockBefore = undefined -- TODO FLAC__metadata_iterator_insert_block_before
 
+foreign import ccall unsafe "FLAC__metadata_iterator_insert_block_before"
+  c_iterator_insert_block_before :: MetaIterator -> Ptr Metadata -> IO Bool
+
+-- | Insert a new block after the current block. You cannot insert a
+-- 'StreamInfo' block as there can be only one, the one that already exists
+-- at the head when you read in a chain. The chain takes ownership of the
+-- new block and it will be deleted when the chain is deleted. The iterator
+-- will be left pointing to the new block.
+--
+-- The function returns 'False' if something went wrong.
+
 iteratorInsertBlockAfter :: MetaIterator -> Metadata -> IO Bool
 iteratorInsertBlockAfter = undefined -- TODO FLAC__metadata_iterator_insert_block_after
+
+foreign import ccall unsafe "FLAC__metadata_iterator_insert_block_after"
+  c_iterator_insert_block_after :: MetaIterator -> Ptr Metadata -> IO Bool
+
+----------------------------------------------------------------------------
+-- Inspecting matadata blocks
+
+view :: Storable a => MetaIterator -> Int -> Proxy a -> IO a
+view iter offset Proxy = c_iterator_get_block iter >>= (`peekByteOff` offset)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -259,9 +326,9 @@ iteratorInsertBlockAfter = undefined -- TODO FLAC__metadata_iterator_insert_bloc
 -- it is, otherwise return the given pointer unchanged.
 
 maybePtr :: a -> Maybe a
-maybePtr ptr
-  | unsafeCoerce ptr == nullPtr = Nothing
-  | otherwise                   = Just ptr
+maybePtr a
+  | unsafeCoerce a == nullPtr = Nothing
+  | otherwise                 = Just a
 
 -- | A version of 'toEnum' that converts from any 'Integral' type.
 

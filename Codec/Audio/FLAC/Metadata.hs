@@ -9,70 +9,133 @@
 --
 -- Operations on FLAC metadata.
 
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE ConstrainedClassMethods    #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Codec.Audio.FLAC.Metadata
-  (  )
+  ( -- * Types
+    FlacMeta
+  , FlacMetaSettings (..)
+    -- * Manipulate FLAC metadata
+  , flacMeta
+  , get
+    -- * Meta values
+  )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal
+import Control.Monad.Catch
 import Control.Monad.Except
 import Control.Monad.Reader
+import Data.Bool (bool)
+import Data.Default.Class
+import Data.IORef
 import Data.Proxy
+import Foreign
+import Foreign.C.Types
 
--- https://xiph.org/flac/api/group__flac__metadata.html
+#if MIN_VERSION_base(4,9,0)
+import Data.Kind (Constraint)
+#else
+import GHC.Exts (Constraint)
+#endif
 
--- This should be built around the concept of file — the libFLAC library
--- does not give us alternatives to that.
+type Inner a = ExceptT MetaChainStatus (ReaderT Context IO) a
 
--- We should use: Level 2: Read-write access to all metadata blocks. This
--- level is write- efficient in all cases, but uses more memory since all
--- metadata for the whole file is read into memory and manipulated before
--- writing out again.
+newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
+  deriving (Functor, Applicative, Monad)
 
-data FlacMetaError = FlacMetaError
+data Context = Context
+  { metaChain    :: MetaChain
+  , metaIterator :: MetaIterator
+  , metaModified :: IORef Bool }
 
-data FlacMeta a = ExceptT FlacMetaError (ReaderT MetaIterator IO a)
+data FlacMetaSettings = FlacMetaSettings
+  { flacMetaSortPadding   :: Bool
+  , flacMetaUsePadding    :: Bool
+  , flacMetaPreserveStats :: Bool
+  } deriving (Show, Read, Eq, Ord)
 
--- functor
--- applicative
--- monad
--- foldable
--- traversable
-
-data FlacMetaSettings -- what to do with padding, etc.
-
-runFlacMeta :: MonadIO m => FlacMetaSettings -> FlacMeta a -> m (Either FlacMetaError a)
-runFlacMeta = undefined -- TODO don't forget to use bracket
-
-data MetaValueMarker
-  = MinBlockSize
+instance Default FlacMetaSettings where
+  def = FlacMetaSettings
+    { flacMetaSortPadding   = True
+    , flacMetaUsePadding    = True
+    , flacMetaPreserveStats = True }
 
 class MetaValue a where -- class should not be public as stuff necessary to
   -- implement its methods won't be available to end user
-  type MetaValueType a :: *
+  type MetaType a :: *
+  type MetaReadable a :: Constraint
   -- what if we could have associated types of kind constraint that would
   -- determine what actions can be performed?
+  get :: MetaReadable a => a -> FlacMeta (MetaType a)
+  get = undefined
 
--- the crud api
+-- add :: MetaValue a => a -> MetaValueType a -> FlacMeta ()
+-- add = undefined
 
-get :: MetaValue a => a -> FlacMeta (MetaValueType a)
-get = undefined
+-- set :: MetaValue a => a -> MetaValueType a -> FlacMeta ()
+-- set = undefined
 
-add :: MetaValue a => a -> MetaValueType a -> FlacMeta ()
-add = undefined
+-- update :: MetaValue a => a -> (MetaValueType a -> MetaValueType a) -> FlacMeta (MetaValueType a)
+-- update = undefined
 
-set :: MetaValue a => a -> MetaValueType a -> FlacMeta ()
-set = undefined
+-- delete :: MetaValue a => a -> FlacMeta ()
+-- delete = undefined
 
-update :: MetaValue a => a -> (MetaValueType a -> MetaValueType a) -> FlacMeta (MetaValueType a)
-update = undefined
+-- | Manipulate FLAC metadata.
 
-delete :: MetaValue a => a -> FlacMeta ()
-delete = undefined
+flacMeta :: MonadIO m
+  => FlacMetaSettings  -- ^ Settings to use
+  -> FilePath          -- ^ File to operate on
+  -> FlacMeta a        -- ^ Actions to perform
+  -> m (Either MetaChainStatus a) -- ^ The result
+flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
+  where
+    acquire = (,) <$> chainNew <*> iteratorNew
+    release (mchain, miterator) = do
+      forM_ mchain    chainDelete
+      forM_ miterator iteratorDelete
+    action stuff =
+      case stuff of
+        (Just metaChain, Just metaIterator) -> do
+          metaModified <- newIORef False
+          flip runReaderT Context {..} . runExceptT $ do
+            liftBool (chainRead metaChain path)
+            liftIO (iteratorInit metaIterator metaChain)
+            result <- unFlacMeta m
+            modified <- liftIO (readIORef metaModified)
+            when modified $
+              liftBool (chainWrite metaChain flacMetaUsePadding flacMetaPreserveStats)
+            return result
+        _ -> return (Left MetaChainStatusMemoryAllocationError)
 
-wipe :: FlacMeta () -- deletes all meta data
-wipe = undefined
+-- wipe :: FlacMeta () -- deletes all meta data
+-- wipe = undefined
+
+helper :: IO ()
+helper = do
+  let path = "/home/mark/store/music/Adam Lambert/2015, The Original High/01 Ghost Town.flac"
+  result <- flacMeta def path $ do
+    get SampleRate
+  print result
+
+----------------------------------------------------------------------------
+-- Meta values
+
+data SampleRate = SampleRate
+
+instance MetaValue SampleRate where
+  type MetaType     SampleRate = Int
+  type MetaReadable SampleRate = ()
+  get SampleRate = FlacMeta $ do
+    -- TODO need a helper for this
+    iterator <- asks metaIterator
+    fromIntegral <$> liftIO (view iterator (8 * sizeOf (0 :: CUInt)) (Proxy :: Proxy CUInt))
 
 -- min/max blocksize
 -- min/max framesize
@@ -98,5 +161,22 @@ wipe = undefined
 ----------------------------------------------------------------------------
 -- Helpers
 
--- need lifters that would take care of constant checking if everything is
--- OK after every action, they should signal correct errors automatically
+-- | Lift an action that may return 'Nothing' in case of failure into
+-- 'FlacMeta' monad taking care of error reporting.
+
+liftMaybe :: IO (Maybe a) -> Inner a
+liftMaybe m = liftIO m >>= maybe throwStatus return
+
+-- | Lift an action that returns 'False' on failure into 'FlacMeta' monad
+-- taking care of error reporting.
+
+liftBool :: IO Bool -> Inner ()
+liftBool m = liftIO m >>= bool throwStatus (return ())
+
+-- | Get 'MetaChainStatus' and throw it immediately.
+
+throwStatus :: Inner a
+throwStatus = do
+  chain  <- asks metaChain
+  status <- liftIO (chainStatus chain)
+  throwError status
