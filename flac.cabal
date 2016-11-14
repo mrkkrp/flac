@@ -76,6 +76,7 @@ library
   other-modules:      Codec.Audio.FLAC.Metadata.Internal
                     , Codec.Audio.FLAC.StreamDecoder.Internal
                     , Codec.Audio.FLAC.StreamEncoder.Internal
+                    , Codec.Audio.FLAC.Util
   if flag(dev)
     ghc-options:      -Wall -Werror
   else

@@ -47,6 +47,7 @@ module Codec.Audio.FLAC.Metadata.Internal
   )
 where
 
+import Codec.Audio.FLAC.Util
 import Control.Arrow (second)
 import Control.Monad
 import Data.ByteArray (ByteArray)
@@ -80,36 +81,36 @@ newtype Metadata = Metadata (Ptr Void)
 
 data MetaChainStatus
   = MetaChainStatusOK
-    -- ^ The chain is in the normal OK state
+    -- ^ The chain is in the normal OK state.
   | MetaChainStatusIllegalInput
     -- ^ The data passed into a function violated the function's usage
-    -- criteria
+    -- criteria.
   | MetaChainStatusErrorOpeningFile
-    -- ^ The chain could not open the target file
+    -- ^ The chain could not open the target file.
   | MetaChainStatusNotFlacFile
     -- ^ The chain could not find the FLAC signature at the start of the
-    -- file
+    -- file.
   | MetaChainStatusNotWritable
-    -- ^ The chain tried to write to a file that was not writable
+    -- ^ The chain tried to write to a file that was not writable.
   | MetaChainStatusBadMetadata
     -- ^ The chain encountered input that does not conform to the FLAC
-    -- metadata specification
+    -- metadata specification.
   | MetaChainStatusReadError
-    -- ^ The chain encountered an error while reading the FLAC file
+    -- ^ The chain encountered an error while reading the FLAC file.
   | MetaChainStatusSeekError
-    -- ^ The chain encountered an error while seeking in the FLAC file
+    -- ^ The chain encountered an error while seeking in the FLAC file.
   | MetaChainStatusWriteError
-    -- ^ The chain encountered an error while writing the FLAC file
+    -- ^ The chain encountered an error while writing the FLAC file.
   | MetaChainStatusRenameError
-    -- ^ The chain encountered an error renaming the FLAC file
+    -- ^ The chain encountered an error renaming the FLAC file.
   | MetaChainStatusUnlinkError
-    -- ^ The chain encountered an error removing the temporary file
+    -- ^ The chain encountered an error removing the temporary file.
   | MetaChainStatusMemoryAllocationError
-    -- ^ Memory allocation failed
+    -- ^ Memory allocation failed.
   | MetaChainStatusInternalError
-    -- ^ The caller violated an assertion or an unexpected error occurred
+    -- ^ The caller violated an assertion or an unexpected error occurred.
   | MetaChainStatusInvalidCallbacks
-    -- ^ One or more of the required callbacks was NULL
+    -- ^ One or more of the required callbacks was NULL.
   | MetaChainStatusReadWriteMismatch
     -- ^ This error occurs when read and write methods do not match (i.e.
     -- when if you read with callbacks, you should also write with
@@ -164,10 +165,10 @@ foreign import ccall unsafe "FLAC__metadata_chain_status"
 chainRead :: MetaChain -> FilePath -> IO Bool
 chainRead chain path =
   withCString path $ \cstr ->
-    toEnum' <$> c_chain_read chain cstr
+    c_chain_read chain cstr
 
 foreign import ccall unsafe "FLAC__metadata_chain_read"
-  c_chain_read :: MetaChain -> CString -> IO CInt
+  c_chain_read :: MetaChain -> CString -> IO Bool
 
 -- | Write all metadata out to the FLAC file.
 
@@ -176,11 +177,11 @@ chainWrite
   -> Bool              -- ^ Whether to use padding
   -> Bool              -- ^ Whether to preserve file stats
   -> IO Bool           -- ^ 'False' if something went wrong
-chainWrite chain usePadding preserveStats = toEnum' <$>
+chainWrite chain usePadding preserveStats =
   c_chain_write chain (fromEnum' usePadding) (fromEnum' preserveStats)
 
 foreign import ccall unsafe "FLAC__metadata_chain_write"
-  c_chain_write :: MetaChain -> CInt -> CInt -> IO CInt
+  c_chain_write :: MetaChain -> CInt -> CInt -> IO Bool
 
 -- | Move all padding blocks to the end on the metadata, then merge them
 -- into a single block. Useful to get maximum padding to have better changes
@@ -234,19 +235,19 @@ foreign import ccall unsafe "FLAC__metadata_iterator_init"
 -- already at the end.
 
 iteratorNext :: MetaIterator -> IO Bool
-iteratorNext = fmap toEnum' . c_iterator_next
+iteratorNext = c_iterator_next
 
 foreign import ccall unsafe "FLAC__metadata_iterator_next"
-  c_iterator_next :: MetaIterator -> IO CInt
+  c_iterator_next :: MetaIterator -> IO Bool
 
 -- | Move the iterator backward one metadata block, returning 'False' if
 -- already at the beginning.
 
 iteratorPrev :: MetaIterator -> IO Bool
-iteratorPrev = fmap toEnum' . c_iterator_prev
+iteratorPrev = c_iterator_prev
 
 foreign import ccall unsafe "FLAC__metadata_iterator_prev"
-  c_iterator_prev :: MetaIterator -> IO CInt
+  c_iterator_prev :: MetaIterator -> IO Bool
 
 -- | Get the type of the metadata block at the current position. Useful for
 -- fast searching.
@@ -273,11 +274,11 @@ iteratorDeleteBlock
   :: MetaIterator      -- ^ Iterator that determines the position
   -> Bool              -- ^ Whether to replace the block with padding
   -> IO Bool           -- ^ 'False' if something went wrong
-iteratorDeleteBlock iterator replaceWithPadding = toEnum' <$>
+iteratorDeleteBlock iterator replaceWithPadding =
   c_iterator_delete_block iterator (fromEnum' replaceWithPadding)
 
 foreign import ccall unsafe "FLAC__metadata_iterator_delete_block"
-  c_iterator_delete_block :: MetaIterator -> CInt -> IO CInt
+  c_iterator_delete_block :: MetaIterator -> CInt -> IO Bool
 
 -- | Insert a new 'Metadata' block before the current block. You cannot
 -- insert a block before the first 'StreamInfo' block. You cannot insert a
@@ -364,24 +365,3 @@ constructVorbis = undefined
 
 foreign import ccall unsafe "FLAC__metadata_iterator_get_block"
   c_iterator_get_block :: MetaIterator -> IO (Ptr Metadata)
-
-----------------------------------------------------------------------------
--- Helpers
-
--- | Coerce to 'Ptr' and check if it's a null pointer, return 'Nothing' if
--- it is, otherwise return the given pointer unchanged.
-
-maybePtr :: a -> Maybe a
-maybePtr a
-  | unsafeCoerce a == nullPtr = Nothing
-  | otherwise                 = Just a
-
--- | A version of 'toEnum' that converts from any 'Integral' type.
-
-toEnum' :: (Integral a, Enum b) => a -> b
-toEnum' = toEnum . fromIntegral
-
--- | A version of 'fromEnum' that is polymorphic in return type.
-
-fromEnum' :: (Integral a, Enum b) => b -> a
-fromEnum' = fromIntegral . fromEnum
