@@ -14,6 +14,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 
 module Codec.Audio.FLAC.Metadata
@@ -24,18 +25,33 @@ module Codec.Audio.FLAC.Metadata
   , flacMeta
   , get
     -- * Meta values
+  , MinBlockSize (..)
+  , MaxBlockSize (..)
+  , MinFrameSize (..)
+  , MaxFrameSize (..)
+  , SampleRate (..)
+  , Channels (..)
+  , BitsPerSample (..)
+  , TotalSamples (..)
+  , MD5Sum (..)
+  , Duration (..)
   )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal
+import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Except
 import Control.Monad.Reader
+import Crypto.Hash hiding (Context)
+import Data.Bits
 import Data.Bool (bool)
+import Data.ByteString (ByteString)
 import Data.Default.Class
 import Data.IORef
+import Data.Maybe (fromJust)
 import Data.Proxy
-import Foreign
+import Foreign hiding (void)
 import Foreign.C.Types
 
 #if MIN_VERSION_base(4,9,0)
@@ -47,7 +63,7 @@ import GHC.Exts (Constraint)
 type Inner a = ExceptT MetaChainStatus (ReaderT Context IO) a
 
 newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
-  deriving (Functor, Applicative, Monad)
+  deriving (Functor, Applicative, Monad, MonadIO)
 
 data Context = Context
   { metaChain    :: MetaChain
@@ -69,11 +85,11 @@ instance Default FlacMetaSettings where
 class MetaValue a where -- class should not be public as stuff necessary to
   -- implement its methods won't be available to end user
   type MetaType a :: *
-  type MetaReadable a :: Constraint
+  -- type MetaReadable a :: Constraint -- assuming they are all readable
   -- what if we could have associated types of kind constraint that would
   -- determine what actions can be performed?
-  get :: MetaReadable a => a -> FlacMeta (MetaType a)
-  get = undefined
+  get :: a -> FlacMeta (MetaType a)
+  get = const nonsense
 
 -- add :: MetaValue a => a -> MetaValueType a -> FlacMeta ()
 -- add = undefined
@@ -106,6 +122,8 @@ flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
           metaModified <- newIORef False
           flip runReaderT Context {..} . runExceptT $ do
             liftBool (chainRead metaChain path)
+            when flacMetaSortPadding $
+              liftIO (chainSortPadding metaChain)
             liftIO (iteratorInit metaIterator metaChain)
             result <- unFlacMeta m
             modified <- liftIO (readIORef metaModified)
@@ -120,43 +138,93 @@ flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
 helper :: IO ()
 helper = do
   let path = "/home/mark/store/music/Adam Lambert/2015, The Original High/01 Ghost Town.flac"
-  result <- flacMeta def path $ do
-    get SampleRate
-  print result
+  void . flacMeta def path $ do
+    get MinBlockSize >>= liftIO . print
+    get MaxBlockSize >>= liftIO . print
+    get MinFrameSize >>= liftIO . print
+    get MaxFrameSize >>= liftIO . print
+    get SampleRate >>= liftIO . print
+    get Channels >>= liftIO . print
+    get BitsPerSample >>= liftIO . print
+    get TotalSamples >>= liftIO . print
+    digest <- digestFromByteString <$> get MD5Sum
+    liftIO . print $ (digest :: Maybe (Digest MD5))
+    get Duration >>= liftIO . print
 
 ----------------------------------------------------------------------------
 -- Meta values
 
+data MinBlockSize = MinBlockSize
+
+instance MetaValue MinBlockSize where
+  type MetaType MinBlockSize = Word32
+  get MinBlockSize = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 4 cuint) cuint)
+
+data MaxBlockSize = MaxBlockSize
+
+instance MetaValue MaxBlockSize where
+  type MetaType MaxBlockSize = Word32
+  get MaxBlockSize = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 5 cuint) cuint)
+
+data MinFrameSize = MinFrameSize
+
+instance MetaValue MinFrameSize where
+  type MetaType MinFrameSize = Word32
+  get MinFrameSize = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 6 cuint) cuint)
+
+data MaxFrameSize = MaxFrameSize
+
+instance MetaValue MaxFrameSize where
+  type MetaType MaxFrameSize = Word32
+  get MaxFrameSize = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 7 cuint) cuint)
+
 data SampleRate = SampleRate
 
 instance MetaValue SampleRate where
-  type MetaType     SampleRate = Int
-  type MetaReadable SampleRate = ()
-  get SampleRate = FlacMeta $ do
-    -- TODO need a helper for this
-    iterator <- asks metaIterator
-    fromIntegral <$> liftIO (view iterator (8 * sizeOf (0 :: CUInt)) (Proxy :: Proxy CUInt))
+  type MetaType SampleRate = Word32
+  get SampleRate = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 8 cuint) cuint)
 
--- min/max blocksize
--- min/max framesize
--- sample rate
--- channels
--- bits per sample
--- total samples
--- md5 sum (byte string)
+data Channels = Channels
 
--- we can calculate duration as a floating point number
+instance MetaValue Channels where
+  type MetaType Channels = Word32
+  get Channels = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 9 cuint) cuint)
 
--- application data (identified by four-byte id, provide enumeration)
+data BitsPerSample = BitsPerSample
 
--- seektable
+instance MetaValue BitsPerSample where
+  type MetaType BitsPerSample = Word32
+  get BitsPerSample = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 10 cuint) cuint)
 
--- vorbis comment we need common fields to be pre-defined enumeration to
--- avoid typos
+data TotalSamples = TotalSamples
 
--- cue sheet
+instance MetaValue TotalSamples where
+  type MetaType TotalSamples = Word64
+  get TotalSamples = (FlacMeta . fmap fromJust)
+    (viewNum StreamInfoType (offset 12 cuint) culong)
 
--- picture as sequence of bytes, the stuff in docs
+data MD5Sum = MD5Sum
+
+instance MetaValue MD5Sum where
+  type MetaType MD5Sum = ByteString
+  get MD5Sum = (FlacMeta . fmap fromJust)
+    (viewArray StreamInfoType (offset 12 cuint + offset 1 culong) 16)
+
+data Duration = Duration
+
+instance MetaValue Duration where
+  type MetaType Duration = Double
+  get Duration = do
+    totalSamples <- fromIntegral <$> get TotalSamples
+    sampleRate   <- fromIntegral <$> get SampleRate
+    return (totalSamples / sampleRate)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -180,3 +248,74 @@ throwStatus = do
   chain  <- asks metaChain
   status <- liftIO (chainStatus chain)
   throwError status
+
+-- | Position 'MetaIterator' on first metadata block that is of given
+-- 'MetadataType'. Return 'False' if no such block found.
+
+findMetaBlock :: MetadataType -> Inner Bool
+findMetaBlock given = do
+  chain    <- asks metaChain
+  iterator <- asks metaIterator
+  actual   <- liftIO (iteratorGetBlockType iterator)
+  let go hasMore = do
+        actual' <- iteratorGetBlockType iterator
+        if actual' == given
+          then return True
+          else if hasMore
+                 then iteratorNext iterator >>= go
+                 else return False
+  -- first try current block
+  if actual == given
+    then return True
+    else liftIO $ do
+      iteratorInit iterator chain
+      go True
+
+withMetaBlock :: MetadataType -> Inner a -> Inner (Maybe a)
+withMetaBlock metaBlock m = do
+  res <- findMetaBlock metaBlock
+  if res
+    then pure <$> m
+    else return Nothing
+
+-- | A helper to view simple numeric values in metadata blocks. Returns
+-- 'Nothing' if it can't find requested data.
+
+viewNum
+  :: (Storable a, Integral a, Num b)
+  => MetadataType      -- ^ Type of meta block to locate
+  -> Int               -- ^ Offset in bytes
+  -> Proxy a           -- ^ Which type to peek
+  -> Inner (Maybe b)   -- ^ The result
+viewNum metaBlock offset' hint = withMetaBlock metaBlock $ do
+  iterator <- asks metaIterator
+  fromIntegral <$> liftIO (view iterator offset' hint)
+
+viewArray
+  :: MetadataType      -- ^ Type of meta block to locate
+  -> Int               -- ^ Offset in bytes
+  -> Int               -- ^ Size in bytes
+  -> Inner (Maybe ByteString) -- ^ The result
+viewArray metaBlock offset' size = withMetaBlock metaBlock $ do
+  iterator <- asks metaIterator
+  liftIO (viewBA iterator offset' size)
+
+-- | Nonsense.
+
+nonsense :: FlacMeta a
+nonsense = FlacMeta (throwError MetaChainStatusOK)
+
+----------------------------------------------------------------------------
+-- Type hints and stuff
+
+offset :: forall a. Storable a => Int -> Proxy a -> Int
+offset n Proxy = n * sizeOf (undefined :: a)
+
+cuint :: Proxy CUInt
+cuint = Proxy
+
+culong :: Proxy CULong
+culong = Proxy
+
+int :: Proxy Int
+int = Proxy

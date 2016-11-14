@@ -16,7 +16,7 @@ module Codec.Audio.FLAC.Metadata.Internal
     MetaChain
   , MetaIterator
   , MetaChainStatus (..)
-  , MetadataType
+  , MetadataType (..)
   , Metadata (..)
     -- * Chain
   , chainNew
@@ -39,10 +39,12 @@ module Codec.Audio.FLAC.Metadata.Internal
   , iteratorInsertBlockAfter
     -- * Inspecting metadata blocks
   , view
+  , viewBA
   )
 where
 
 import Control.Monad
+import Data.ByteArray (ByteArray)
 import Data.ByteString (ByteString)
 import Data.Maybe (fromJust)
 import Data.Proxy
@@ -50,8 +52,11 @@ import Data.Void
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import Foreign.Marshal.Array
+import Foreign.Ptr
 import Unsafe.Coerce
 import qualified Data.ByteArray     as BA
+import qualified Data.ByteString    as B
 import qualified Data.Memory.Endian as E
 
 ----------------------------------------------------------------------------
@@ -318,6 +323,11 @@ foreign import ccall unsafe "FLAC__metadata_iterator_insert_block_after"
 
 view :: Storable a => MetaIterator -> Int -> Proxy a -> IO a
 view iter offset Proxy = c_iterator_get_block iter >>= (`peekByteOff` offset)
+
+viewBA :: MetaIterator -> Int -> Int -> IO ByteString
+viewBA iter offset size = do
+  ptr <- c_iterator_get_block iter
+  B.pack <$> peekArray size (ptr `plusPtr` offset)
 
 ----------------------------------------------------------------------------
 -- Helpers

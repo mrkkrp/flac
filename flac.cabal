@@ -63,6 +63,7 @@ library
                     , memory           >= 0.12   && < 0.14
                     , mtl              >= 2.0    && < 3.0
                     , transformers     >= 0.4    && < 0.6
+                    , cryptonite
   extra-libraries:    FLAC
   exposed-modules:    Codec.Audio.FLAC
                     , Codec.Audio.FLAC.Metadata
