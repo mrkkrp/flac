@@ -45,6 +45,7 @@ build-type:           Simple
 description:          Complete high-level binding to libFLAC.
 extra-doc-files:      CHANGELOG.md
                     , README.md
+extra-source-files:   cbits/*.h
 
 source-repository head
   type:               git
@@ -68,15 +69,25 @@ library
                     , transformers     >= 0.4    && < 0.6
                     , unordered-containers >= 0.2.5 && < 0.3
   extra-libraries:    FLAC
-  exposed-modules:    Codec.Audio.FLAC
-                    , Codec.Audio.FLAC.Metadata
+  exposed-modules:    Codec.Audio.FLAC.Metadata
                     , Codec.Audio.FLAC.StreamDecoder
                     , Codec.Audio.FLAC.StreamEncoder
-                    , Codec.Audio.FLAC.Type
-  other-modules:      Codec.Audio.FLAC.Metadata.Internal
+                    , Codec.Audio.FLAC.Types
+  other-modules:      Codec.Audio.FLAC.Metadata.Internal.Level2Interface
+                    , Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
+                    , Codec.Audio.FLAC.Metadata.Internal.Object
+                    , Codec.Audio.FLAC.Metadata.Internal.Types
                     , Codec.Audio.FLAC.StreamDecoder.Internal
+                    , Codec.Audio.FLAC.StreamDecoder.Internal.Helpers
+                    , Codec.Audio.FLAC.StreamDecoder.Internal.Types
                     , Codec.Audio.FLAC.StreamEncoder.Internal
+                    , Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
+                    , Codec.Audio.FLAC.StreamEncoder.Internal.Types
                     , Codec.Audio.FLAC.Util
+  c-sources:          cbits/metadata_level2_helpers.c
+                    , cbits/stream_decoder_helpers.c
+                    , cbits/stream_encoder_helpers.c
+  include-dirs:       cbits
   if flag(dev)
     ghc-options:      -Wall -Werror
   else

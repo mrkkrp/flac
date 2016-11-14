@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level utilities.
+-- Random non-public helpers.
 
 module Codec.Audio.FLAC.Util
   ( maybePtr
@@ -15,14 +15,12 @@ module Codec.Audio.FLAC.Util
   , fromEnum' )
 where
 
-import Foreign.Ptr
+import Foreign
 import Unsafe.Coerce
 
-----------------------------------------------------------------------------
--- Helpers
-
 -- | Coerce to 'Ptr' and check if it's a null pointer, return 'Nothing' if
--- it is, otherwise return the given pointer unchanged.
+-- it is, otherwise return the given pointer unchanged. Needless to say that
+-- this thing is unsafe.
 
 maybePtr :: a -> Maybe a
 maybePtr a

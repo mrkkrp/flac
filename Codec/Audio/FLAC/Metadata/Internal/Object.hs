@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC.StreamDecoder.Internal
+-- Module      :  Codec.Audio.FLAC.Metadata.Internal.Object
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -7,8 +7,9 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around FLAC stream decoder API.
+-- Wrappers for functions to work with metadata objects like Vorbis
+-- comments.
 
-module Codec.Audio.FLAC.StreamDecoder.Internal
+module Codec.Audio.FLAC.Metadata.Internal.Object
   (  )
 where

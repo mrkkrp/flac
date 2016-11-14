@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC
+-- Module      :  Codec.Audio.FLAC.StreamDecoder.Internal.Types
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -7,8 +7,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Complete high-level binding to libFLAC.
+-- Non-public stream encoder-specific helper types.
 
-module Codec.Audio.FLAC
+module Codec.Audio.FLAC.StreamDecoder.Internal.Types
   (  )
 where

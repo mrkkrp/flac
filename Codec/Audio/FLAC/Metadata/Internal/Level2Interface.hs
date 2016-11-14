@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC.Metadata.Internal
+-- Module      :  Codec.Audio.FLAC.Metadata.Internal.Level2Interface
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -7,13 +7,14 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around C functions to work with FLAC metadata.
+-- Low-level Haskell wrapper around C functions to work with level 2 FLAC
+-- metadata interface.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 
-module Codec.Audio.FLAC.Metadata.Internal
+module Codec.Audio.FLAC.Metadata.Internal.Level2Interface
   ( -- * Types
     MetaChain
   , MetaIterator

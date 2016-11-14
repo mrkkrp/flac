@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC.Type
+-- Module      :  Codec.Audio.FLAC.Metadata.Internal.Types
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -7,8 +7,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Types used in the library.
+-- Non-public metadata-specific helper types.
 
-module Codec.Audio.FLAC.Type
+module Codec.Audio.FLAC.Metadata.Internal.Types
   (  )
 where

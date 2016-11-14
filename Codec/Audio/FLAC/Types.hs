@@ -1,5 +1,5 @@
 -- |
--- Module      :  Codec.Audio.FLAC.StreamDecoder.Internal
+-- Module      :  Codec.Audio.FLAC.Types
 -- Copyright   :  © 2016 Mark Karpov
 -- License     :  BSD 3 clause
 --
@@ -7,8 +7,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around FLAC stream decoder API.
+-- Types exported by the library.
 
-module Codec.Audio.FLAC.StreamDecoder.Internal
+module Codec.Audio.FLAC.Types
   (  )
 where

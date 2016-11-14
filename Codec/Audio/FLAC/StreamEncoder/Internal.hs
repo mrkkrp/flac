@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around FLAC stream encoder.
+-- Low-level Haskell wrapper around FLAC stream encoder API.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 
@@ -37,6 +37,8 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
   , encoderFinish
  )
 where
+
+-- https://github.com/xiph/flac/blob/master/examples/c/encode/file/main.c
 
 import Codec.Audio.FLAC.Util
 import Data.Void
