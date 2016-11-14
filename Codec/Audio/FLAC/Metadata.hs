@@ -11,12 +11,14 @@
 
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE ConstrainedClassMethods    #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
@@ -27,14 +29,17 @@ module Codec.Audio.FLAC.Metadata
     -- * Meta values
   , MinBlockSize (..)
   , MaxBlockSize (..)
-  -- , MinFrameSize (..)
-  -- , MaxFrameSize (..)
+  , MinFrameSize (..)
+  , MaxFrameSize (..)
   , SampleRate (..)
-  -- , Channels (..)
-  -- , BitsPerSample (..)
-  -- , TotalSamples (..)
-  -- , MD5Sum (..)
-  -- , Duration (..)
+  , Channels (..)
+  , BitsPerSample (..)
+  , TotalSamples (..)
+  , MD5Sum (..)
+  , Duration (..)
+  , VorbisVendor (..)
+  , VorbisComment (..)
+  , VorbisField (..)
   )
 where
 
@@ -59,6 +64,7 @@ import Data.Proxy
 import Data.Text (Text)
 import Foreign hiding (void)
 import Foreign.C.Types
+import GHC.TypeLits
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.HashMap.Strict   as HM
 import qualified Data.Text             as T
@@ -132,18 +138,23 @@ helper = do
   void . flacMeta def path $ do
     get MinBlockSize >>= liftIO . print
     get MaxBlockSize >>= liftIO . print
-    -- get MinFrameSize >>= liftIO . print
-    -- get MaxFrameSize >>= liftIO . print
+    get MinFrameSize >>= liftIO . print
+    get MaxFrameSize >>= liftIO . print
     get SampleRate >>= liftIO . print
-    -- get Channels >>= liftIO . print
-    -- get BitsPerSample >>= liftIO . print
-    -- get TotalSamples >>= liftIO . print
-    -- digest <- digestFromByteString <$> get MD5Sum
-    -- liftIO . print $ (digest :: Maybe (Digest MD5))
-    -- get Duration >>= liftIO . print
-    -- liftIO $ putStrLn "-----------------"
-    -- get VorbisVendor >>= liftIO . print
-    -- get (VorbisComment Artist) >>= liftIO . print
+    get Channels >>= liftIO . print
+    get BitsPerSample >>= liftIO . print
+    get TotalSamples >>= liftIO . print
+    digest <- digestFromByteString <$> get MD5Sum
+    liftIO . print $ (digest :: Maybe (Digest MD5))
+    get Duration >>= liftIO . print
+    liftIO $ putStrLn "-----------------"
+    get VorbisVendor >>= liftIO . print
+    get (VorbisComment Artist) >>= liftIO . print
+    get (VorbisComment Title) >>= liftIO . print
+    get (VorbisComment Version) >>= liftIO . print
+    get (VorbisComment TrackNumber) >>= liftIO . print
+    get (VorbisComment TrackTotal) >>= liftIO . print
+    get (VorbisComment Album) >>= liftIO . print
 
 ----------------------------------------------------------------------------
 -- Meta values
@@ -152,145 +163,137 @@ data MinBlockSize = MinBlockSize
 
 instance MetaValue MinBlockSize where
   type MetaType MinBlockSize = Word32
-  get MinBlockSize =
-    (FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock) $
-      liftIO . (iteratorGetBlock >=> getMinBlockSize)
+  type MetaWriteable MinBlockSize =
+    TypeError ('Text "This attribute is not writeable.")
+  get MinBlockSize = inStreamInfo getMinBlockSize
 
 data MaxBlockSize = MaxBlockSize
 
 instance MetaValue MaxBlockSize where
   type MetaType MaxBlockSize = Word32
-  get MaxBlockSize =
-    (FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock) $
-      liftIO . (iteratorGetBlock >=> getMaxBlockSize)
+  type MetaWriteable MaxBlockSize =
+    TypeError ('Text "This attribute is not writeable.")
+  get MaxBlockSize = inStreamInfo getMaxBlockSize
 
--- data MinFrameSize = MinFrameSize
+data MinFrameSize = MinFrameSize
 
--- instance MetaValue MinFrameSize where
---   type MetaType MinFrameSize = Word32
---   get MinFrameSize = (FlacMeta . fmap fromJust)
---     (viewNum StreamInfoType (offset 6 cuint) cuint)
+instance MetaValue MinFrameSize where
+  type MetaType MinFrameSize = Word32
+  type MetaWriteable MinFrameSize =
+    TypeError ('Text "This attribute is not writeable.")
+  get MinFrameSize = inStreamInfo getMinFrameSize
 
--- data MaxFrameSize = MaxFrameSize
+data MaxFrameSize = MaxFrameSize
 
--- instance MetaValue MaxFrameSize where
---   type MetaType MaxFrameSize = Word32
---   get MaxFrameSize = (FlacMeta . fmap fromJust)
---     (viewNum StreamInfoType (offset 7 cuint) cuint)
+instance MetaValue MaxFrameSize where
+  type MetaType MaxFrameSize = Word32
+  type MetaWriteable MaxFrameSize =
+    TypeError ('Text "This attribute is not writeable.")
+  get MaxFrameSize = inStreamInfo getMaxFrameSize
 
 data SampleRate = SampleRate
 
 instance MetaValue SampleRate where
   type MetaType SampleRate = Word32
-  get SampleRate =
-    (FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock) $
-      liftIO . (iteratorGetBlock >=> getSampleRate)
+  type MetaWriteable SampleRate =
+    TypeError ('Text "This attribute is not writeable.")
+  get SampleRate = inStreamInfo getSampleRate
 
--- data Channels = Channels
+data Channels = Channels
 
--- instance MetaValue Channels where
---   type MetaType Channels = Word32
---   get Channels = (FlacMeta . fmap fromJust)
---     (viewNum StreamInfoType (offset 9 cuint) cuint)
+instance MetaValue Channels where
+  type MetaType Channels = Word32
+  type MetaWriteable Channels =
+    TypeError ('Text "This attribute is not writeable.")
+  get Channels = inStreamInfo getChannels
 
--- data BitsPerSample = BitsPerSample
+data BitsPerSample = BitsPerSample
 
--- instance MetaValue BitsPerSample where
---   type MetaType BitsPerSample = Word32
---   get BitsPerSample = (FlacMeta . fmap fromJust)
---     (viewNum StreamInfoType (offset 10 cuint) cuint)
+instance MetaValue BitsPerSample where
+  type MetaType BitsPerSample = Word32
+  type MetaWriteable BitsPerSample =
+    TypeError ('Text "This attribute is not writeable.")
+  get BitsPerSample = inStreamInfo getBitsPerSample
 
--- data TotalSamples = TotalSamples
+data TotalSamples = TotalSamples
 
--- instance MetaValue TotalSamples where
---   type MetaType TotalSamples = Word64
---   get TotalSamples = (FlacMeta . fmap fromJust)
---     (viewNum StreamInfoType (offset 12 cuint) culong)
+instance MetaValue TotalSamples where
+  type MetaType TotalSamples = Word64
+  type MetaWriteable TotalSamples =
+    TypeError ('Text "This attribute is not writeable.")
+  get TotalSamples = inStreamInfo getTotalSamples
 
--- data MD5Sum = MD5Sum
+data MD5Sum = MD5Sum
 
--- instance MetaValue MD5Sum where
---   type MetaType MD5Sum = ByteString
---   get MD5Sum = (FlacMeta . fmap fromJust)
---     (viewArray StreamInfoType (offset 12 cuint + offset 1 culong) 16)
+instance MetaValue MD5Sum where
+  type MetaType MD5Sum = ByteString
+  type MetaWriteable MD5Sum =
+    TypeError ('Text "This attribute is not writeable.")
+  get MD5Sum = inStreamInfo getMd5Sum
 
--- data Duration = Duration
+data Duration = Duration
 
--- instance MetaValue Duration where
---   type MetaType Duration = Double
---   get Duration = do
---     totalSamples <- fromIntegral <$> get TotalSamples
---     sampleRate   <- fromIntegral <$> get SampleRate
---     return (totalSamples / sampleRate)
+instance MetaValue Duration where
+  type MetaType Duration = Double
+  type MetaWriteable Duration =
+    TypeError ('Text "This attribute is not writeable.")
+  get Duration = do
+    totalSamples <- fromIntegral <$> get TotalSamples
+    sampleRate   <- fromIntegral <$> get SampleRate
+    return (totalSamples / sampleRate)
 
--- data VorbisVendor = VorbisVendor
+data VorbisVendor = VorbisVendor
 
--- instance MetaValue VorbisVendor where
---   type MetaType VorbisVendor = Maybe Text
---   get VorbisVendor = FlacMeta $ do
---     ensureVorbisCache
---     vorbisCacheRef <- asks metaVorbis
---     res <- liftIO (readIORef vorbisCacheRef)
---     case res of
---       Left  _ -> return Nothing
---       Right x -> (return . return . vorbisVendor) x
+instance MetaValue VorbisVendor where
+  type MetaType VorbisVendor = Maybe Text
+  type MetaWriteable VorbisVendor = ()
+  get VorbisVendor = FlacMeta . withMetaBlock VorbisCommentBlock $
+    liftIO . (iteratorGetBlock >=> getVorbisVendor)
 
--- data VorbisComment = VorbisComment VorbisField
+data VorbisComment = VorbisComment VorbisField
 
--- data VorbisField
---   = Title
---   | Version
---   | Album
---   | TrackNumber
---   | TrackTotal
---   | Artist
---   | Performer
---   | Copyright
---   | License
---   | Organization
---   | Description
---   | Genre
---   | Date
---   | Location
---   | Contact
---   | ISRC
---   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+data VorbisField
+  = Title
+  | Version
+  | Album
+  | TrackNumber
+  | TrackTotal
+  | Artist
+  | Performer
+  | Copyright
+  | License
+  | Organization
+  | Description
+  | Genre
+  | Date
+  | Location
+  | Contact
+  | ISRC
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
--- vorbisFieldName :: VorbisField -> Text
--- vorbisFieldName = T.pack . fmap toUpper . show
+vorbisFieldName :: VorbisField -> Text
+vorbisFieldName = T.pack . fmap toUpper . show
 
--- instance MetaValue VorbisComment where
---   type MetaType VorbisComment = Maybe Text
---   get (VorbisComment field) = FlacMeta $ do
---     ensureVorbisCache
---     vorbisCacheRef <- asks metaVorbis
---     res <- liftIO (readIORef vorbisCacheRef)
---     case res of
---       Left  _ -> return Nothing
---       Right x -> (return . HM.lookup (vorbisFieldName field) . vorbisComments) x
+instance MetaValue VorbisComment where
+  type MetaType VorbisComment = Maybe Text
+  type MetaWriteable VorbisComment = ()
+  get (VorbisComment field) = FlacMeta . fmap join . withMetaBlock VorbisCommentBlock $
+    liftIO . (iteratorGetBlock >=> getVorbisComment (vorbisFieldName field))
 
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | Lift an action that may return 'Nothing' in case of failure into
--- 'FlacMeta' monad taking care of error reporting.
+inStreamInfo :: (Metadata -> IO a) -> FlacMeta a
+inStreamInfo f = (FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock) $
+  liftIO . (iteratorGetBlock >=> f)
 
-liftMaybe :: IO (Maybe a) -> Inner a
-liftMaybe m = liftIO m >>= maybe throwStatus return
-
--- | Lift an action that returns 'False' on failure into 'FlacMeta' monad
--- taking care of error reporting.
-
-liftBool :: IO Bool -> Inner ()
-liftBool m = liftIO m >>= bool throwStatus (return ())
-
--- | Get 'MetaChainStatus' and throw it immediately.
-
-throwStatus :: Inner a
-throwStatus = do
-  chain  <- asks metaChain
-  status <- liftIO (chainStatus chain)
-  throwError status
+withMetaBlock :: MetadataType -> (MetaIterator -> Inner a) -> Inner (Maybe a)
+withMetaBlock metaBlock m = do
+  res      <- findMetaBlock metaBlock
+  iterator <- asks metaIterator
+  if res
+    then pure <$> m iterator
+    else return Nothing
 
 -- | Position 'MetaIterator' on first metadata block that is of given
 -- 'MetadataType'. Return 'False' if no such block found.
@@ -314,45 +317,25 @@ findMetaBlock given = do
       iteratorInit iterator chain
       go True
 
-withMetaBlock :: MetadataType -> (MetaIterator -> Inner a) -> Inner (Maybe a)
-withMetaBlock metaBlock m = do
-  res      <- findMetaBlock metaBlock
-  iterator <- asks metaIterator
-  if res
-    then pure <$> m iterator
-    else return Nothing
+-- | Lift an action that may return 'Nothing' in case of failure into
+-- 'FlacMeta' monad taking care of error reporting.
 
--- | A helper to view simple numeric values in metadata blocks. Returns
--- 'Nothing' if it can't find requested data.
+liftMaybe :: IO (Maybe a) -> Inner a
+liftMaybe m = liftIO m >>= maybe throwStatus return
 
--- viewNum
---   :: (Storable a, Integral a, Num b)
---   => MetadataType      -- ^ Type of meta block to locate
---   -> Int               -- ^ Offset in bytes
---   -> Proxy a           -- ^ Which type to peek
---   -> Inner (Maybe b)   -- ^ The result
--- viewNum metaBlock offset' hint = withMetaBlock metaBlock $ do
---   iterator <- asks metaIterator
---   fromIntegral <$> liftIO (view iterator offset' hint)
+-- | Lift an action that returns 'False' on failure into 'FlacMeta' monad
+-- taking care of error reporting.
 
--- viewArray
---   :: MetadataType      -- ^ Type of meta block to locate
---   -> Int               -- ^ Offset in bytes
---   -> Int               -- ^ Size in bytes
---   -> Inner (Maybe ByteString) -- ^ The result
--- viewArray metaBlock offset' size = withMetaBlock metaBlock $ do
---   iterator <- asks metaIterator
---   liftIO (viewBA iterator offset' size)
+liftBool :: IO Bool -> Inner ()
+liftBool m = liftIO m >>= bool throwStatus (return ())
 
--- ensureVorbisCache :: Inner ()
--- ensureVorbisCache = do
---   vorbisCacheRef <- asks metaVorbis
---   vorbisCache <- liftIO (readIORef vorbisCacheRef)
---   when (vorbisCache == Left False) $ do
---     x <- withMetaBlock VorbisCommentType $ do
---       iterator <- asks metaIterator
---       liftIO (viewVorbis iterator)
---     liftIO (writeIORef vorbisCacheRef (maybe (Left True) Right x))
+-- | Get 'MetaChainStatus' and throw it immediately.
+
+throwStatus :: Inner a
+throwStatus = do
+  chain  <- asks metaChain
+  status <- liftIO (chainStatus chain)
+  throwError status
 
 -- | Specify that the metadata chain has been modified.
 
@@ -365,18 +348,3 @@ setModified = do
 
 nonsense :: FlacMeta a
 nonsense = FlacMeta (throwError MetaChainStatusOK)
-
-----------------------------------------------------------------------------
--- Type hints and stuff
-
-offset :: forall a. Storable a => Int -> Proxy a -> Int
-offset n Proxy = n * sizeOf (undefined :: a)
-
-cuint :: Proxy CUInt
-cuint = Proxy
-
-culong :: Proxy CULong
-culong = Proxy
-
-int :: Proxy Int
-int = Proxy

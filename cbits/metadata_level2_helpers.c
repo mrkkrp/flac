@@ -43,7 +43,56 @@ unsigned FLAC__metadata_get_max_blocksize(FLAC__StreamMetadata *block)
   return block->data.stream_info.max_blocksize;
 }
 
+unsigned FLAC__metadata_get_min_framesize(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.min_framesize;
+}
+
+unsigned FLAC__metadata_get_max_framesize(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.max_framesize;
+}
+
 unsigned FLAC__metadata_get_sample_rate(FLAC__StreamMetadata *block)
 {
   return block->data.stream_info.sample_rate;
+}
+
+unsigned FLAC__metadata_get_channels(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.channels;
+}
+
+unsigned FLAC__metadata_get_bits_per_sample(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.bits_per_sample;
+}
+
+FLAC__uint64 FLAC__metadata_get_total_samples(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.total_samples;
+}
+
+FLAC__byte *FLAC__metadata_get_md5sum(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.md5sum;
+}
+
+FLAC__byte *FLAC__metadata_get_vorbis_vendor(FLAC__StreamMetadata *block)
+{
+  return block->data.vorbis_comment.vendor_string.entry;
+}
+
+FLAC__byte *FLAC__metadata_get_vorbis_comment(FLAC__StreamMetadata *block, const char *name)
+{
+  int i;
+  i = FLAC__metadata_object_vorbiscomment_find_entry_from(block, 0, name);
+  if (i == -1)
+    {
+      return NULL;
+    }
+  else
+    {
+      return (block->data.vorbis_comment.comments + i)->entry;
+    }
 }

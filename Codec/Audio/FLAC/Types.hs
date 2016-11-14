@@ -16,7 +16,7 @@ where
 
 import Data.Default.Class
 
--- | Settings
+-- | Settings that control how metadata is written in FLAC file.
 
 data FlacMetaSettings = FlacMetaSettings
   { flacMetaSortPadding   :: Bool

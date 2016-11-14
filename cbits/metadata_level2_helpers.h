@@ -38,6 +38,14 @@
 
 unsigned FLAC__metadata_get_min_blocksize(FLAC__StreamMetadata *);
 unsigned FLAC__metadata_get_max_blocksize(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_min_framesize(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_max_framesize(FLAC__StreamMetadata *);
 unsigned FLAC__metadata_get_sample_rate(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_channels(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_bits_per_sample(FLAC__StreamMetadata *);
+FLAC__uint64 FLAC__metadata_get_total_samples(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_md5sum(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_vorbis_vendor(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_vorbis_comment(FLAC__StreamMetadata *, const char*);
 
 #endif /* FLAC__METADATA_LEVEL2_HELPERS_H */
