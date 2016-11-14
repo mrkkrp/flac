@@ -36,6 +36,8 @@
 
 #include <FLAC/metadata.h>
 
-/* TODO */
+unsigned FLAC__metadata_get_min_blocksize(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_max_blocksize(FLAC__StreamMetadata *);
+unsigned FLAC__metadata_get_sample_rate(FLAC__StreamMetadata *);
 
 #endif /* FLAC__METADATA_LEVEL2_HELPERS_H */

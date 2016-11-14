@@ -32,3 +32,18 @@
  */
 
 #include "metadata_level2_helpers.h"
+
+unsigned FLAC__metadata_get_min_blocksize(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.min_blocksize;
+}
+
+unsigned FLAC__metadata_get_max_blocksize(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.max_blocksize;
+}
+
+unsigned FLAC__metadata_get_sample_rate(FLAC__StreamMetadata *block)
+{
+  return block->data.stream_info.sample_rate;
+}
