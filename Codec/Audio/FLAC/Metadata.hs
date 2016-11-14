@@ -13,6 +13,7 @@
 {-# LANGUAGE ConstrainedClassMethods    #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -47,12 +48,17 @@ import Crypto.Hash hiding (Context)
 import Data.Bits
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
+import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
 import Data.Maybe (fromJust)
 import Data.Proxy
+import Data.Text (Text)
 import Foreign hiding (void)
 import Foreign.C.Types
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.HashMap.Strict   as HM
+import qualified Data.Text             as T
 
 #if MIN_VERSION_base(4,9,0)
 import Data.Kind (Constraint)
@@ -68,7 +74,8 @@ newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
 data Context = Context
   { metaChain    :: MetaChain
   , metaIterator :: MetaIterator
-  , metaModified :: IORef Bool }
+  , metaModified :: IORef Bool
+  , metaVorbis   :: IORef (Either Bool Vorbis) }
 
 data FlacMetaSettings = FlacMetaSettings
   { flacMetaSortPadding   :: Bool
@@ -103,6 +110,28 @@ class MetaValue a where -- class should not be public as stuff necessary to
 -- delete :: MetaValue a => a -> FlacMeta ()
 -- delete = undefined
 
+data VorbisField
+  = Title
+  | Version
+  | Album
+  | TrackNumber
+  | TrackTotal
+  | Artist
+  | Performer
+  | Copyright
+  | License
+  | Organization
+  | Description
+  | Genre
+  | Date
+  | Location
+  | Contact
+  | ISRC
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+vorbisFieldName :: VorbisField -> Text
+vorbisFieldName = T.pack . fmap toUpper . show
+
 -- | Manipulate FLAC metadata.
 
 flacMeta :: MonadIO m
@@ -120,6 +149,7 @@ flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
       case stuff of
         (Just metaChain, Just metaIterator) -> do
           metaModified <- newIORef False
+          metaVorbis   <- newIORef (Left False)
           flip runReaderT Context {..} . runExceptT $ do
             liftBool (chainRead metaChain path)
             when flacMetaSortPadding $
@@ -150,6 +180,9 @@ helper = do
     digest <- digestFromByteString <$> get MD5Sum
     liftIO . print $ (digest :: Maybe (Digest MD5))
     get Duration >>= liftIO . print
+    liftIO $ putStrLn "-----------------"
+    get VorbisVendor >>= liftIO . print
+    get (VorbisComment Artist) >>= liftIO . print
 
 ----------------------------------------------------------------------------
 -- Meta values
@@ -226,6 +259,30 @@ instance MetaValue Duration where
     sampleRate   <- fromIntegral <$> get SampleRate
     return (totalSamples / sampleRate)
 
+data VorbisVendor = VorbisVendor
+
+instance MetaValue VorbisVendor where
+  type MetaType VorbisVendor = Maybe Text
+  get VorbisVendor = FlacMeta $ do
+    ensureVorbisCache
+    vorbisCacheRef <- asks metaVorbis
+    res <- liftIO (readIORef vorbisCacheRef)
+    case res of
+      Left  _ -> return Nothing
+      Right x -> (return . return . vorbisVendor) x
+
+data VorbisComment = VorbisComment VorbisField
+
+instance MetaValue VorbisComment where
+  type MetaType VorbisComment = Maybe Text
+  get (VorbisComment field) = FlacMeta $ do
+    ensureVorbisCache
+    vorbisCacheRef <- asks metaVorbis
+    res <- liftIO (readIORef vorbisCacheRef)
+    case res of
+      Left  _ -> return Nothing
+      Right x -> (return . HM.lookup (vorbisFieldName field) . vorbisComments) x
+
 ----------------------------------------------------------------------------
 -- Helpers
 
@@ -299,6 +356,23 @@ viewArray
 viewArray metaBlock offset' size = withMetaBlock metaBlock $ do
   iterator <- asks metaIterator
   liftIO (viewBA iterator offset' size)
+
+ensureVorbisCache :: Inner ()
+ensureVorbisCache = do
+  vorbisCacheRef <- asks metaVorbis
+  vorbisCache <- liftIO (readIORef vorbisCacheRef)
+  when (vorbisCache == Left False) $ do
+    x <- withMetaBlock VorbisCommentType $ do
+      iterator <- asks metaIterator
+      liftIO (viewVorbis iterator)
+    liftIO (writeIORef vorbisCacheRef (maybe (Left True) Right x))
+
+-- | Specify that the metadata chain has been modified.
+
+setModified :: Inner ()
+setModified = do
+  modified <- asks metaModified
+  liftIO (writeIORef modified True)
 
 -- | Nonsense.
 

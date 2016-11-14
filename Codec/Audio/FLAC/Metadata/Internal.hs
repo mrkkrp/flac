@@ -10,6 +10,8 @@
 -- Low-level Haskell wrapper around C functions to work with FLAC metadata.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 
 module Codec.Audio.FLAC.Metadata.Internal
   ( -- * Types
@@ -18,6 +20,7 @@ module Codec.Audio.FLAC.Metadata.Internal
   , MetaChainStatus (..)
   , MetadataType (..)
   , Metadata (..)
+  , Vorbis (..)
     -- * Chain
   , chainNew
   , chainDelete
@@ -40,14 +43,18 @@ module Codec.Audio.FLAC.Metadata.Internal
     -- * Inspecting metadata blocks
   , view
   , viewBA
+  , viewVorbis
   )
 where
 
+import Control.Arrow (second)
 import Control.Monad
 import Data.ByteArray (ByteArray)
 import Data.ByteString (ByteString)
+import Data.HashMap.Strict (HashMap)
 import Data.Maybe (fromJust)
 import Data.Proxy
+import Data.Text (Text)
 import Data.Void
 import Foreign
 import Foreign.C.String
@@ -55,15 +62,19 @@ import Foreign.C.Types
 import Foreign.Marshal.Array
 import Foreign.Ptr
 import Unsafe.Coerce
-import qualified Data.ByteArray     as BA
-import qualified Data.ByteString    as B
-import qualified Data.Memory.Endian as E
+import qualified Data.ByteArray      as BA
+import qualified Data.ByteString     as B
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Memory.Endian  as E
+import qualified Data.Text           as T
+import qualified Data.Text.Foreign   as T
 
 ----------------------------------------------------------------------------
 -- Types
 
 newtype MetaChain = MetaChain (Ptr Void) -- there is no life in Void, only death
 newtype MetaIterator = MetaIterator (Ptr Void)
+newtype Metadata = Metadata (Ptr Void)
 
 -- | Enumeration of statuses of 'MetaChain'.
 
@@ -117,19 +128,6 @@ data MetadataType
   | PictureType
   | UndefinedType
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
-
-data Metadata
-  = StreamInfo Word32 Word32 Word32 Word64 ByteString
-  | Padding
-  | Application
-  | SeekTable
-  | VorbisComment
-  | CueSheet
-  | Picture
-  | Undefined
-
--- instance Storable Metadata where
-  -- TODO
 
 ----------------------------------------------------------------------------
 -- Chain
@@ -259,14 +257,6 @@ iteratorGetBlockType = fmap toEnum' . c_iterator_get_block_type
 foreign import ccall unsafe "FLAC__metadata_iterator_get_block_type"
   c_iterator_get_block_type :: MetaIterator -> IO CUInt
 
--- | Get the 'Metadata' block at the current position.
-
--- iteratorGetBlock :: MetaIterator -> IO Metadata
--- iteratorGetBlock = c_iterator_get_block >=> peekMetadata
-
-foreign import ccall unsafe "FLAC__metadata_iterator_get_block"
-  c_iterator_get_block :: MetaIterator -> IO (Ptr Metadata)
-
 -- | Write given 'Metadata' block at position pointed to by 'MetaIterator'
 -- replacing existing block.
 
@@ -319,15 +309,61 @@ foreign import ccall unsafe "FLAC__metadata_iterator_insert_block_after"
   c_iterator_insert_block_after :: MetaIterator -> Ptr Metadata -> IO Bool
 
 ----------------------------------------------------------------------------
--- Inspecting matadata blocks
+-- Inspecting and setting matadata blocks
 
-view :: Storable a => MetaIterator -> Int -> Proxy a -> IO a
-view iter offset Proxy = c_iterator_get_block iter >>= (`peekByteOff` offset)
+view :: forall a. Storable a => MetaIterator -> Int -> Proxy a -> IO a
+view iter offset Proxy = do
+  ptr <- c_iterator_get_block iter
+  peek (alignPtr (ptr `plusPtr` offset) (alignment (undefined :: a))) -- think more about this
 
 viewBA :: MetaIterator -> Int -> Int -> IO ByteString
 viewBA iter offset size = do
   ptr <- c_iterator_get_block iter
   B.pack <$> peekArray size (ptr `plusPtr` offset)
+
+data Vorbis = Vorbis
+  { vorbisVendor   :: Text
+  , vorbisComments :: HashMap Text Text
+  } deriving (Show, Read, Eq)
+
+--  If decoding fails, a UnicodeException is thrown.
+-- this perhaps should be incapsulated in a Storable instance
+
+viewVorbis :: MetaIterator -> IO Vorbis
+viewVorbis iter = do
+  ptr       <- c_iterator_get_block iter
+  let headerSize = sizeOf (0 :: CUInt) * 3
+      ptrSize = sizeOf (undefined :: Ptr Void)
+  vendor    <- peekVorbisStr (ptr `plusPtr` headerSize)
+  -- let vorbisOffset = 4 + ptrSize
+  -- numComments <- peekByteOff ptr (headerSize + vorbisOffset) :: IO Word32
+  -- print numComments
+  -- let go :: Word32 -> Ptr a -> HashMap Text Text -> IO (HashMap Text Text)
+  --     go n ptr m = do
+  --       let commentOffset = headerSize + vorbisOffset + 4 + ptrSize * fromIntegral n
+  --       commentPtr <- peek (ptr `plusPtr` commentOffset)
+  --       comment    <- peekVorbisStr commentPtr
+  --       let (name, value) = second (T.drop 1) (T.breakOn "=" comment)
+  --           m' = HM.insert name value m
+  --       if n == 0
+  --         then return m'
+  --         else go (n - 1) m'
+  -- comments <- go numComments HM.empty
+  return Vorbis
+    { vorbisVendor   = vendor
+    , vorbisComments = HM.empty }
+
+peekVorbisStr :: Ptr a -> IO Text
+peekVorbisStr ptr = do
+  len  <- peekByteOff ptr 0 :: IO Word32
+  let strPtr = alignPtr (ptr `plusPtr` 4) (alignment (undefined :: Ptr Void))
+  T.peekCStringLen (strPtr, fromIntegral len)
+
+constructVorbis :: Vorbis -> IO (Ptr Metadata)
+constructVorbis = undefined
+
+foreign import ccall unsafe "FLAC__metadata_iterator_get_block"
+  c_iterator_get_block :: MetaIterator -> IO (Ptr Metadata)
 
 ----------------------------------------------------------------------------
 -- Helpers
