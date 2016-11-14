@@ -20,6 +20,18 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
   , encoderSetBitsPerSample
   , encoderSetSampleRate
   , encoderSetCompressionLevel
+  , encoderSetBlockSize
+  , encoderSetDoMidSideStereo
+    -- TODO FLAC__stream_encoder_set_loose_mid_side_stereo
+    -- TODO FLAC__stream_encoder_set_apodization
+    -- TODO FLAC__stream_encoder_set_max_lpc_order
+    -- TODO FLAC__stream_encoder_set_qlp_coeff_precision
+    -- TODO FLAC__stream_encoder_set_do_qlp_coeff_prec_search
+    -- TODO FLAC__stream_encoder_set_do_escape_coding
+    -- TODO FLAC__stream_encoder_set_do_exhaustive_model_search
+    -- TODO FLAC__stream_encoder_set_min_residual_partition_order
+    -- TODO FLAC__stream_encoder_set_max_residual_partition_order
+    -- TODO FLAC__stream_encoder_set_rice_parameter_search_dist
   , encoderSetVerify
   , encoderInitFile
   , encoderFinish
@@ -153,6 +165,23 @@ encoderSetCompressionLevel encoder level =
 
 foreign import ccall unsafe "FLAC__stream_encoder_set_compression_level"
   c_encoder_set_compression_level :: Encoder -> CUInt -> IO Bool
+
+-- | Set the blocksize to use while encoding.
+
+encoderSetBlockSize :: Encoder -> Word32 -> IO Bool
+encoderSetBlockSize encoder blockSize =
+  c_encoder_set_blocksize encoder (fromIntegral blockSize)
+
+foreign import ccall unsafe "FLAC__stream_encoder_set_blocksize"
+  c_encoder_set_blocksize :: Encoder -> CUInt -> IO Bool
+
+-- | Set to 'True' to enable mid-side encoding on stereo input.
+
+encoderSetDoMidSideStereo :: Encoder -> Bool -> IO Bool
+encoderSetDoMidSideStereo = c_encoder_set_do_mid_side_stereo
+
+foreign import ccall unsafe "FLAC_stream_encoder_set_do_mid_side_stereo"
+  c_encoder_set_do_mid_side_stereo :: Encoder -> Bool -> IO Bool
 
 -- | Set the “verify” flag. If true, the encoder will verify it's own
 -- encoded output by feeding it through an internal decoder and comparing
