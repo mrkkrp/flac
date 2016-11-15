@@ -82,8 +82,8 @@ data MetaChainStatus
     -- ^ One or more of the required callbacks was NULL.
   | MetaChainStatusReadWriteMismatch
     -- ^ This error occurs when read and write methods do not match (i.e.
-    -- when if you read with callbacks, you should also write with
-    -- callbacks).
+    -- when if you read with callbacks, you should also use function that
+    -- writes with callbacks).
   | MetaChainStatusWrongWriteCall
     -- ^ Should not ever happen when you use this binding.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)

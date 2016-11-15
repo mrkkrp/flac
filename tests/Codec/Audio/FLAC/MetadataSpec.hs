@@ -45,36 +45,36 @@ spec = -- dummy test for now
   describe "it" $
     it "works" $ do
       let path = "/home/mark/store/music/Adam Lambert/2015, The Original High/01 Ghost Town.flac"
-      r <- flacMeta def path $ do
-        get MinBlockSize >>= liftIO . print
-        get MaxBlockSize >>= liftIO . print
-        get MinFrameSize >>= liftIO . print
-        get MaxFrameSize >>= liftIO . print
-        get SampleRate >>= liftIO . print
-        get Channels >>= liftIO . print
-        get BitsPerSample >>= liftIO . print
-        get TotalSamples >>= liftIO . print
-        get FileSize >>= liftIO . print
-        get BitRate  >>= liftIO . print
-        digest <- digestFromByteString <$> get MD5Sum
+      r <- runFlacMeta def path $ do
+        retrieve MinBlockSize >>= liftIO . print
+        retrieve MaxBlockSize >>= liftIO . print
+        retrieve MinFrameSize >>= liftIO . print
+        retrieve MaxFrameSize >>= liftIO . print
+        retrieve SampleRate >>= liftIO . print
+        retrieve Channels >>= liftIO . print
+        retrieve BitsPerSample >>= liftIO . print
+        retrieve TotalSamples >>= liftIO . print
+        retrieve FileSize >>= liftIO . print
+        retrieve BitRate  >>= liftIO . print
+        digest <- digestFromByteString <$> retrieve MD5Sum
         liftIO . print $ (digest :: Maybe (Digest MD5))
-        get Duration >>= liftIO . print
+        retrieve Duration >>= liftIO . print
         liftIO $ putStrLn "-----------------"
-        get VorbisVendor >>= liftIO . print
-        get (VorbisComment Title) >>= liftIO . print
-        get (VorbisComment Version) >>= liftIO . print
-        get (VorbisComment Album) >>= liftIO . print
-        get (VorbisComment TrackNumber) >>= liftIO . print
-        get (VorbisComment TrackTotal) >>= liftIO . print
-        get (VorbisComment Artist) >>= liftIO . print
-        get (VorbisComment Performer) >>= liftIO . print
-        get (VorbisComment Copyright) >>= liftIO . print
-        get (VorbisComment License) >>= liftIO . print
-        get (VorbisComment Organization) >>= liftIO . print
-        get (VorbisComment Description) >>= liftIO . print
-        get (VorbisComment Genre) >>= liftIO . print
-        get (VorbisComment Date) >>= liftIO . print
-        get (VorbisComment Location) >>= liftIO . print
-        get (VorbisComment Contact) >>= liftIO . print
-        get (VorbisComment ISRC) >>= liftIO . print
+        retrieve VorbisVendor >>= liftIO . print
+        retrieve (VorbisComment Title) >>= liftIO . print
+        retrieve (VorbisComment Version) >>= liftIO . print
+        retrieve (VorbisComment Album) >>= liftIO . print
+        retrieve (VorbisComment TrackNumber) >>= liftIO . print
+        retrieve (VorbisComment TrackTotal) >>= liftIO . print
+        retrieve (VorbisComment Artist) >>= liftIO . print
+        retrieve (VorbisComment Performer) >>= liftIO . print
+        retrieve (VorbisComment Copyright) >>= liftIO . print
+        retrieve (VorbisComment License) >>= liftIO . print
+        retrieve (VorbisComment Organization) >>= liftIO . print
+        retrieve (VorbisComment Description) >>= liftIO . print
+        retrieve (VorbisComment Genre) >>= liftIO . print
+        retrieve (VorbisComment Date) >>= liftIO . print
+        retrieve (VorbisComment Location) >>= liftIO . print
+        retrieve (VorbisComment Contact) >>= liftIO . print
+        retrieve (VorbisComment ISRC) >>= liftIO . print
       r `shouldBe` Right ()
