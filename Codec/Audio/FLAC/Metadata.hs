@@ -24,6 +24,8 @@ module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
     FlacMeta
   , flacMeta
+  , FlacMetaSettings (..)
+  , MetaChainStatus (..)
   , get
   , set
     -- * Meta values
@@ -49,34 +51,43 @@ import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
 import Codec.Audio.FLAC.Metadata.Internal.Object
 import Codec.Audio.FLAC.Metadata.Internal.Types
-import Codec.Audio.FLAC.Types
+import Control.Exception (bracket)
 import Control.Monad
-import Control.Monad.Catch
 import Control.Monad.Except
 import Control.Monad.Reader
-import Crypto.Hash hiding (Context)
-import Data.Bits
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
 import Data.Maybe (fromJust, fromMaybe)
-import Data.Proxy
 import Data.Text (Text)
 import Foreign hiding (void)
-import Foreign.C.Types
 import GHC.TypeLits
 import System.IO
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.HashMap.Strict   as HM
-import qualified Data.Text             as T
 
 #if MIN_VERSION_base(4,9,0)
 import Data.Kind (Constraint)
 #else
 import GHC.Exts (Constraint)
 #endif
+
+-- | Settings that control how metadata is written in FLAC file.
+
+data FlacMetaSettings = FlacMetaSettings
+  { flacMetaSortPadding   :: Bool
+  , flacMetaUsePadding    :: Bool
+  , flacMetaPreserveStats :: Bool
+  } deriving (Show, Read, Eq, Ord)
+
+instance Default FlacMetaSettings where
+  def = FlacMetaSettings
+    { flacMetaSortPadding   = True
+    , flacMetaUsePadding    = True
+    , flacMetaPreserveStats = True }
+
+type NotWritable = 'Text "This attribute is not writable."
 
 ----------------------------------------------------------------------------
 -- Metadata manipulation API
@@ -136,42 +147,6 @@ flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
 -- wipe :: FlacMeta () -- deletes all meta data
 -- wipe = undefined
 
-helper :: IO ()
-helper = do
-  let path = "/home/mark/store/music/Adam Lambert/2015, The Original High/01 Ghost Town.flac"
-  void . flacMeta def path $ do
-    get MinBlockSize >>= liftIO . print
-    get MaxBlockSize >>= liftIO . print
-    get MinFrameSize >>= liftIO . print
-    get MaxFrameSize >>= liftIO . print
-    get SampleRate >>= liftIO . print
-    get Channels >>= liftIO . print
-    get BitsPerSample >>= liftIO . print
-    get TotalSamples >>= liftIO . print
-    get FileSize >>= liftIO . print
-    get BitRate  >>= liftIO . print
-    digest <- digestFromByteString <$> get MD5Sum
-    liftIO . print $ (digest :: Maybe (Digest MD5))
-    get Duration >>= liftIO . print
-    liftIO $ putStrLn "-----------------"
-    get VorbisVendor >>= liftIO . print
-    get (VorbisComment Title) >>= liftIO . print
-    get (VorbisComment Version) >>= liftIO . print
-    get (VorbisComment Album) >>= liftIO . print
-    get (VorbisComment TrackNumber) >>= liftIO . print
-    get (VorbisComment TrackTotal) >>= liftIO . print
-    get (VorbisComment Artist) >>= liftIO . print
-    get (VorbisComment Performer) >>= liftIO . print
-    get (VorbisComment Copyright) >>= liftIO . print
-    get (VorbisComment License) >>= liftIO . print
-    get (VorbisComment Organization) >>= liftIO . print
-    get (VorbisComment Description) >>= liftIO . print
-    get (VorbisComment Genre) >>= liftIO . print
-    get (VorbisComment Date) >>= liftIO . print
-    get (VorbisComment Location) >>= liftIO . print
-    get (VorbisComment Contact) >>= liftIO . print
-    get (VorbisComment ISRC) >>= liftIO . print
-
 ----------------------------------------------------------------------------
 -- Meta values
 
@@ -179,80 +154,70 @@ data MinBlockSize = MinBlockSize
 
 instance MetaValue MinBlockSize where
   type MetaType MinBlockSize = Word32
-  type MetaWriteable MinBlockSize =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable MinBlockSize = TypeError NotWritable
   get MinBlockSize = inStreamInfo getMinBlockSize
 
 data MaxBlockSize = MaxBlockSize
 
 instance MetaValue MaxBlockSize where
   type MetaType MaxBlockSize = Word32
-  type MetaWriteable MaxBlockSize =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable MaxBlockSize = TypeError NotWritable
   get MaxBlockSize = inStreamInfo getMaxBlockSize
 
 data MinFrameSize = MinFrameSize
 
 instance MetaValue MinFrameSize where
   type MetaType MinFrameSize = Word32
-  type MetaWriteable MinFrameSize =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable MinFrameSize = TypeError NotWritable
   get MinFrameSize = inStreamInfo getMinFrameSize
 
 data MaxFrameSize = MaxFrameSize
 
 instance MetaValue MaxFrameSize where
   type MetaType MaxFrameSize = Word32
-  type MetaWriteable MaxFrameSize =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable MaxFrameSize = TypeError NotWritable
   get MaxFrameSize = inStreamInfo getMaxFrameSize
 
 data SampleRate = SampleRate
 
 instance MetaValue SampleRate where
   type MetaType SampleRate = Word32
-  type MetaWriteable SampleRate =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable SampleRate = TypeError NotWritable
   get SampleRate = inStreamInfo getSampleRate
 
 data Channels = Channels
 
 instance MetaValue Channels where
   type MetaType Channels = Word32
-  type MetaWriteable Channels =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable Channels = TypeError NotWritable
   get Channels = inStreamInfo getChannels
 
 data BitsPerSample = BitsPerSample
 
 instance MetaValue BitsPerSample where
   type MetaType BitsPerSample = Word32
-  type MetaWriteable BitsPerSample =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable BitsPerSample = TypeError NotWritable
   get BitsPerSample = inStreamInfo getBitsPerSample
 
 data TotalSamples = TotalSamples
 
 instance MetaValue TotalSamples where
   type MetaType TotalSamples = Word64
-  type MetaWriteable TotalSamples =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable TotalSamples = TypeError NotWritable
   get TotalSamples = inStreamInfo getTotalSamples
 
 data FileSize = FileSize
 
 instance MetaValue FileSize where
   type MetaType FileSize = Integer
-  type MetaWriteable FileSize =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable FileSize = TypeError NotWritable
   get FileSize = FlacMeta (asks metaFileSize)
 
 data BitRate = BitRate
 
 instance MetaValue BitRate where
   type MetaType BitRate = Word32
-  type MetaWriteable BitRate =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable BitRate = TypeError NotWritable
   get BitRate = do
     fileSize <- fromIntegral <$> get FileSize
     duration <- get Duration
@@ -263,16 +228,14 @@ data MD5Sum = MD5Sum
 
 instance MetaValue MD5Sum where
   type MetaType MD5Sum = ByteString
-  type MetaWriteable MD5Sum =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable MD5Sum = TypeError NotWritable
   get MD5Sum = inStreamInfo getMd5Sum
 
 data Duration = Duration
 
 instance MetaValue Duration where
   type MetaType Duration = Double
-  type MetaWriteable Duration =
-    TypeError ('Text "This attribute is not writeable.")
+  type MetaWriteable Duration = TypeError NotWritable
   get Duration = do
     totalSamples <- fromIntegral <$> get TotalSamples
     sampleRate   <- fromIntegral <$> get SampleRate

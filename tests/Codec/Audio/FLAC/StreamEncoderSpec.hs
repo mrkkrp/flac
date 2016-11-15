@@ -1,5 +1,5 @@
 --
--- Tests for the ‘flac’ package.
+-- Test suite for stream encoder.
 --
 -- Copyright © 2016 Mark Karpov <markkarpov@openmailbox.org>
 --
@@ -30,7 +30,11 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
-module Main (main) where
+module Codec.Audio.FLAC.StreamEncoderSpec
+  ( spec )
+where
 
-main :: IO ()
-main = return ()
+import Test.Hspec
+
+spec :: Spec
+spec = return ()
