@@ -33,6 +33,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
     -- TODO FLAC__stream_encoder_set_max_residual_partition_order
     -- TODO FLAC__stream_encoder_set_rice_parameter_search_dist
   , encoderSetVerify
+  , encoderGetState
   , encoderInitFile
   , encoderFinish
  )
@@ -110,8 +111,8 @@ data EncoderState
 ----------------------------------------------------------------------------
 -- Encoder
 
--- | Create a new stream encoder instance with default settings. If case of
--- memory allocation problem 'Nothing' is returned.
+-- | Create a new stream encoder instance with default settings. In the case
+-- of memory allocation problem 'Nothing' is returned.
 
 encoderNew :: IO (Maybe Encoder)
 encoderNew = maybePtr <$> c_encoder_new
@@ -196,6 +197,12 @@ encoderSetVerify = c_encoder_set_verify
 
 foreign import ccall unsafe "FLAC__stream_encoder_set_verify"
   c_encoder_set_verify :: Encoder -> Bool -> IO Bool
+
+encoderGetState :: Encoder -> IO EncoderState
+encoderGetState = fmap toEnum' . c_encoder_get_state
+
+foreign import ccall unsafe "FLAC__stream_encoder_get_state"
+  c_encoder_get_state :: Encoder -> IO CUInt
 
 -- | Initialize the encoder instance to encode native FLAC files.
 
