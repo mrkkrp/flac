@@ -35,6 +35,8 @@ module Codec.Audio.FLAC.Metadata
   , Channels (..)
   , BitsPerSample (..)
   , TotalSamples (..)
+  , FileSize (..)
+  , BitRate (..)
   , MD5Sum (..)
   , Duration (..)
   , VorbisVendor (..)
@@ -65,6 +67,7 @@ import Data.Text (Text)
 import Foreign hiding (void)
 import Foreign.C.Types
 import GHC.TypeLits
+import System.IO
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.HashMap.Strict   as HM
 import qualified Data.Text             as T
@@ -86,7 +89,8 @@ type Inner a = ExceptT MetaChainStatus (ReaderT Context IO) a
 data Context = Context
   { metaChain    :: MetaChain
   , metaIterator :: MetaIterator
-  , metaModified :: IORef Bool }
+  , metaModified :: IORef Bool
+  , metaFileSize :: Integer }
 
 class MetaValue a where -- class should not be public as stuff necessary to
   -- implement its methods won't be available to end user
@@ -116,7 +120,7 @@ flacMeta FlacMetaSettings {..} path m = liftIO (bracket acquire release action)
       case stuff of
         (Just metaChain, Just metaIterator) -> do
           metaModified <- newIORef False
-          metaVorbis   <- newIORef (Left False)
+          metaFileSize <- withFile path ReadMode hFileSize
           flip runReaderT Context {..} . runExceptT $ do
             liftBool (chainRead metaChain path)
             when flacMetaSortPadding $
@@ -144,6 +148,8 @@ helper = do
     get Channels >>= liftIO . print
     get BitsPerSample >>= liftIO . print
     get TotalSamples >>= liftIO . print
+    get FileSize >>= liftIO . print
+    get BitRate  >>= liftIO . print
     digest <- digestFromByteString <$> get MD5Sum
     liftIO . print $ (digest :: Maybe (Digest MD5))
     get Duration >>= liftIO . print
@@ -232,6 +238,26 @@ instance MetaValue TotalSamples where
   type MetaWriteable TotalSamples =
     TypeError ('Text "This attribute is not writeable.")
   get TotalSamples = inStreamInfo getTotalSamples
+
+data FileSize = FileSize
+
+instance MetaValue FileSize where
+  type MetaType FileSize = Integer
+  type MetaWriteable FileSize =
+    TypeError ('Text "This attribute is not writeable.")
+  get FileSize = FlacMeta (asks metaFileSize)
+
+data BitRate = BitRate
+
+instance MetaValue BitRate where
+  type MetaType BitRate = Word32
+  type MetaWriteable BitRate =
+    TypeError ('Text "This attribute is not writeable.")
+  get BitRate = do
+    fileSize <- fromIntegral <$> get FileSize
+    duration <- get Duration
+    -- NOTE 8 / 1000 = 125, (* 8) to get bits, (/ 1000) to get kilos
+    (return . floor) (fileSize / (duration * 125))
 
 data MD5Sum = MD5Sum
 
