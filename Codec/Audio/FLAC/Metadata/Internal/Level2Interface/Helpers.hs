@@ -31,7 +31,8 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , setVorbisVendor
   , getVorbisComment
   , setVorbisComment
-  , deleteVorbisComment )
+  , deleteVorbisComment
+  , isVorbisCommentEmpty )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
@@ -185,3 +186,11 @@ deleteVorbisComment name block =
 
 foreign import ccall unsafe "FLAC__metadata_delete_vorbis_comment"
   c_delete_vorbis_comment :: Metadata -> CString -> IO Bool
+
+-- | Determine a vorbis comment metadata block can be considered empty.
+
+isVorbisCommentEmpty :: Metadata -> IO Bool
+isVorbisCommentEmpty = c_is_vorbis_comment_empty
+
+foreign import ccall unsafe "FLAC__metadata_is_vorbis_comment_empty"
+  c_is_vorbis_comment_empty :: Metadata -> IO Bool

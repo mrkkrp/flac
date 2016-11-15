@@ -135,3 +135,9 @@ FLAC__bool FLAC__metadata_delete_vorbis_comment
       return true;
     }
 }
+
+FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *block)
+{
+  return (block->data.vorbis_comment.vendor_string.length == 0) &&
+    (block->data.vorbis_comment.num_comments == 0);
+}

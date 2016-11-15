@@ -17,7 +17,37 @@
 -- Retrieving and editing metadata information is very easy, you only need
 -- three functions: 'runFlacMeta', 'retrieve', and @('=->')@.
 --
--- TODO Return to this when the module is finished.
+-- Here is how to get sample rate and artist name and print them:
+--
+-- > import Codec.Audio.FLAC.Metadata
+-- > import Control.Monad.IO.Class (MonadIO (..))
+-- > import Data.Default.Class
+-- >
+-- > main :: IO ()
+-- > main = runFlacMeta def "/path/to/my/file.flac" $ do
+-- >   retrieve SampleRate             >>= liftIO . print
+-- >   retrieve (VorbisComment Artist) >>= liftIO . print
+--
+-- Normally you would just return them packed in a tuple from the monad, of
+-- course. We print the values just for demonstration.
+--
+-- The next example shows how to set a couple of tags:
+--
+-- > import Codec.Audio.FLAC.Metadata
+-- > import Control.Monad.IO.Class (MonadIO (..))
+-- > import Data.Default.Class
+-- >
+-- > main :: IO ()
+-- > main = runFlacMeta def "/path/to/my/file.flac" $ do
+-- >   VorbisComment Artist =-> Just "Alexander Scriabin"
+-- >   VorbisComment Title  =-> Just "Sonata №9 “Black Mass”, Op. 68"
+-- >   VorbisComment Date   =-> Nothing
+--
+-- Here we write two tags using the @('=->')@ operator and delete the
+-- 'VorbisComment' 'Date' metadata attribute by setting it to 'Nothing'.
+-- Note that not all attributes are writable, so we cannot set things like
+-- 'SampleRate'. In fact, the type system mechanics used in the library
+-- prevent this.
 --
 -- === Low-level details
 --
@@ -480,15 +510,28 @@ instance MetaValue VorbisComment where
 ----------------------------------------------------------------------------
 -- Extra functionality
 
+-- | Delete the entire “vorbis comment” metadata block if it exists.
+
 wipeVorbisComment :: FlacMeta ()
-wipeVorbisComment = undefined -- TODO
+wipeVorbisComment =
+  void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i ->
+    liftBool (iteratorDeleteBlock i False)
 
 ----------------------------------------------------------------------------
 -- Helpers
 
+-- | A helper that takes a function that extracts something from 'Metadata'
+-- block. It finds the 'StreamInfoBlock', gets 'Metadata' from it and
+-- applies given function to get the final value.
+
 inStreamInfo :: (Metadata -> IO a) -> FlacMeta a
-inStreamInfo f = (FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock) $
+inStreamInfo f = FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
   liftIO . (iteratorGetBlock >=> f)
+
+-- | Given 'MetadataType' (type of metadata block) and an action that uses
+-- an iterator which points to a block of specified type, perform that
+-- action and return its result wrapped in 'Just' if block of requested type
+-- was found, 'Nothing' otherwise.
 
 withMetaBlock :: MetadataType -> (MetaIterator -> Inner a) -> Inner (Maybe a)
 withMetaBlock metaBlock m = do
@@ -498,19 +541,20 @@ withMetaBlock metaBlock m = do
     then pure <$> m iterator
     else return Nothing
 
+-- | Just like 'withMetaBlock', but creates a new block of requested type if
+-- no block of such type can be found.
+
 withMetaBlock' :: MetadataType -> (MetaIterator -> Inner a) -> Inner a
 withMetaBlock' metaBlock m = do
   res      <- findMetaBlock metaBlock
   iterator <- asks metaIterator
-  if res
-    then m iterator
-    else do
-      block <- liftMaybe (objectNew metaBlock)
-      liftBool (iteratorInsertBlockAfter iterator block)
-      m iterator
+  unless res $ do
+    block <- liftMaybe (objectNew metaBlock)
+    liftBool (iteratorInsertBlockAfter iterator block)
+  m iterator
 
 -- | Position 'MetaIterator' on first metadata block that is of given
--- 'MetadataType'. Return 'False' if no such block found.
+-- 'MetadataType'. Return 'False' if no such block was found.
 
 findMetaBlock :: MetadataType -> Inner Bool
 findMetaBlock given = do
@@ -524,18 +568,37 @@ findMetaBlock given = do
           else if hasMore
                  then iteratorNext iterator >>= go
                  else return False
-  -- first try current block
   if actual == given
     then return True
     else liftIO $ do
       iteratorInit iterator chain
       go True
 
-applyVacuum :: Inner ()
-applyVacuum = undefined
+-- | Go through all metadata blocks and delete empty ones.
 
--- | Lift an action that may return 'Nothing' in case of failure into
--- 'FlacMeta' monad taking care of error reporting.
+applyVacuum :: Inner ()
+applyVacuum = do
+  chain    <- asks metaChain
+  iterator <- asks metaIterator
+  liftIO (iteratorInit iterator chain)
+  let go hasMore = do
+        blockType <- liftIO (iteratorGetBlockType iterator)
+        block     <- liftIO (iteratorGetBlock     iterator)
+        empty     <- liftIO (isMetaBlockEmpty blockType block)
+        when empty $
+          liftBool (iteratorDeleteBlock iterator False)
+        when hasMore $
+          liftIO (iteratorNext iterator) >>= go
+  go True
+
+-- | Determine if given metadata block is empty.
+
+isMetaBlockEmpty :: MetadataType -> Metadata -> IO Bool
+isMetaBlockEmpty VorbisCommentBlock block = isVorbisCommentEmpty block
+isMetaBlockEmpty _ _ = return False
+
+-- | Lift an action that may return 'Nothing' on failure into 'FlacMeta'
+-- monad taking care of error reporting.
 
 liftMaybe :: IO (Maybe a) -> Inner a
 liftMaybe m = liftIO m >>= maybe throwStatus return
@@ -560,6 +623,8 @@ setModified :: Inner ()
 setModified = do
   modified <- asks metaModified
   liftIO (writeIORef modified True)
+
+-- | Map 'VorbisField' to its ASCII name in form of a 'ByteString'.
 
 vorbisFieldName :: VorbisField -> ByteString
 vorbisFieldName = B8.pack . fmap toUpper . show

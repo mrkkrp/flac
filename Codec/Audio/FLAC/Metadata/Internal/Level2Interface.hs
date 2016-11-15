@@ -192,11 +192,10 @@ iteratorDeleteBlock
   :: MetaIterator      -- ^ Iterator that determines the position
   -> Bool              -- ^ Whether to replace the block with padding
   -> IO Bool           -- ^ 'False' if something went wrong
-iteratorDeleteBlock iterator replaceWithPadding =
-  c_iterator_delete_block iterator (fromEnum' replaceWithPadding)
+iteratorDeleteBlock = c_iterator_delete_block
 
 foreign import ccall unsafe "FLAC__metadata_iterator_delete_block"
-  c_iterator_delete_block :: MetaIterator -> CInt -> IO Bool
+  c_iterator_delete_block :: MetaIterator -> Bool -> IO Bool
 
 -- | Insert a new 'Metadata' block before the current block. You cannot
 -- insert a block before the first 'StreamInfo' block. You cannot insert a

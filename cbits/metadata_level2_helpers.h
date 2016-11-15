@@ -51,5 +51,6 @@ FLAC__bool FLAC__metadata_set_vorbis_vendor(FLAC__StreamMetadata *, FLAC__byte *
 FLAC__byte *FLAC__metadata_get_vorbis_comment(FLAC__StreamMetadata *, const char*, FLAC__uint32 *);
 FLAC__bool FLAC__metadata_set_vorbis_comment(FLAC__StreamMetadata *, FLAC__byte *, FLAC__uint32);
 FLAC__bool FLAC__metadata_delete_vorbis_comment(FLAC__StreamMetadata *, const char *);
+FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *);
 
 #endif /* FLAC__METADATA_LEVEL2_HELPERS_H */
