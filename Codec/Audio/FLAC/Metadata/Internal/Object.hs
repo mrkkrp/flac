@@ -7,8 +7,9 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Wrappers for functions to work with metadata objects like Vorbis
--- comments.
+-- Wrappers for functions to work with metadata objects, see:
+--
+-- <https://xiph.org/flac/api/group__flac__metadata__object.html>.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 

@@ -8,7 +8,9 @@
 -- Portability :  portable
 --
 -- Low-level Haskell wrapper around C functions to work with level 2 FLAC
--- metadata interface.
+-- metadata interface, see:
+--
+-- <https://xiph.org/flac/api/group__flac__metadata__level2.html>.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
@@ -37,7 +39,6 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
-import Codec.Audio.FLAC.Types
 import Codec.Audio.FLAC.Util
 import Foreign.C.String
 import Foreign.C.Types
@@ -63,7 +64,7 @@ foreign import ccall unsafe "FLAC__metadata_chain_delete"
   c_chain_delete :: MetaChain -> IO ()
 
 -- | Check status of given 'MetaChain'. This can be used to find out what
--- went wrong. Also resents status to 'MetaChainStatusOK'.
+-- went wrong. Also resets status to 'MetaChainStatusOK'.
 
 chainStatus :: MetaChain -> IO MetaChainStatus
 chainStatus = fmap toEnum' . c_chain_status
@@ -75,9 +76,7 @@ foreign import ccall unsafe "FLAC__metadata_chain_status"
 -- something went wrong.
 
 chainRead :: MetaChain -> FilePath -> IO Bool
-chainRead chain path =
-  withCString path $ \cstr ->
-    c_chain_read chain cstr
+chainRead chain path = withCString path (c_chain_read chain)
 
 foreign import ccall unsafe "FLAC__metadata_chain_read"
   c_chain_read :: MetaChain -> CString -> IO Bool

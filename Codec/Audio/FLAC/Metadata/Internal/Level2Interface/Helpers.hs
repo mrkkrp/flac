@@ -7,9 +7,10 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Wrappers around helpers written to help work with level 2 FLAC metadata
--- interface. The functions from this module are not safe, one only should
--- attempt calling them when metadata points to metadata of correct type.
+-- Wrappers around helpers for working with level 2 FLAC metadata interface.
+--
+-- The functions from this module are not safe, one only should attempt
+-- calling them when 'Metadata' contains metadata of correct type.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
@@ -45,6 +46,9 @@ import qualified Data.ByteString    as B
 import qualified Data.Text          as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Foreign  as T
+
+----------------------------------------------------------------------------
+-- Stream info
 
 -- | Get min block size.
 
@@ -119,6 +123,9 @@ getMd5Sum block = do
 
 foreign import ccall unsafe "FLAC__metadata_get_md5sum"
   c_get_md5sum :: Metadata -> IO CString
+
+----------------------------------------------------------------------------
+-- Vorbis comment
 
 -- | Get Vorbis vendor.
 
