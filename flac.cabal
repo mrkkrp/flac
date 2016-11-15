@@ -84,6 +84,7 @@ library
                     , Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
                     , Codec.Audio.FLAC.StreamEncoder.Internal.Types
                     , Codec.Audio.FLAC.Util
+  extra-libraries:    FLAC
   c-sources:          cbits/metadata_level2_helpers.c
                     , cbits/stream_decoder_helpers.c
                     , cbits/stream_encoder_helpers.c
