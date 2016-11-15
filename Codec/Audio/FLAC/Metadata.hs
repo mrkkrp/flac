@@ -149,12 +149,22 @@ helper = do
     get Duration >>= liftIO . print
     liftIO $ putStrLn "-----------------"
     get VorbisVendor >>= liftIO . print
-    get (VorbisComment Artist) >>= liftIO . print
     get (VorbisComment Title) >>= liftIO . print
     get (VorbisComment Version) >>= liftIO . print
+    get (VorbisComment Album) >>= liftIO . print
     get (VorbisComment TrackNumber) >>= liftIO . print
     get (VorbisComment TrackTotal) >>= liftIO . print
-    get (VorbisComment Album) >>= liftIO . print
+    get (VorbisComment Artist) >>= liftIO . print
+    get (VorbisComment Performer) >>= liftIO . print
+    get (VorbisComment Copyright) >>= liftIO . print
+    get (VorbisComment License) >>= liftIO . print
+    get (VorbisComment Organization) >>= liftIO . print
+    get (VorbisComment Description) >>= liftIO . print
+    get (VorbisComment Genre) >>= liftIO . print
+    get (VorbisComment Date) >>= liftIO . print
+    get (VorbisComment Location) >>= liftIO . print
+    get (VorbisComment Contact) >>= liftIO . print
+    get (VorbisComment ISRC) >>= liftIO . print
 
 ----------------------------------------------------------------------------
 -- Meta values
@@ -271,8 +281,8 @@ data VorbisField
   | ISRC
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
-vorbisFieldName :: VorbisField -> Text
-vorbisFieldName = T.pack . fmap toUpper . show
+vorbisFieldName :: VorbisField -> ByteString
+vorbisFieldName = B8.pack . fmap toUpper . show
 
 instance MetaValue VorbisComment where
   type MetaType VorbisComment = Maybe Text

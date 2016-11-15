@@ -31,8 +31,6 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
-import Control.Arrow (second)
-import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Word
@@ -42,7 +40,6 @@ import Foreign.C.Types
 import qualified Data.ByteString    as B
 import qualified Data.Text          as T
 import qualified Data.Text.Encoding as T
-import qualified Data.Text.Foreign  as T
 
 -- | Get min block size.
 
@@ -120,23 +117,28 @@ foreign import ccall unsafe "FLAC__metadata_get_md5sum"
 
 -- | Get Vorbis comment: vendor.
 
-getVorbisVendor :: Metadata -> IO Text -- FIXME null bytes in UTF-8 strings
-getVorbisVendor = c_get_vorbis_vendor >=> fmap T.decodeUtf8 . B.packCString
+getVorbisVendor :: Metadata -> IO Text
+getVorbisVendor metadata = alloca $ \sizePtr -> do
+  ptr  <- c_get_vorbis_vendor metadata sizePtr
+  size <- fromIntegral <$> peek sizePtr
+  T.decodeUtf8 <$> B.packCStringLen (ptr, size)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_vendor"
-  c_get_vorbis_vendor :: Metadata -> IO CString
+  c_get_vorbis_vendor :: Metadata -> Ptr Word32 -> IO CString
 
 -- | Get vorbis comment by name.
 
-getVorbisComment :: Text -> Metadata -> IO (Maybe Text) -- FIXME the same
-getVorbisComment name metadata =
-  T.withCStringLen name $ \(cstr, _) -> do
-    ptr <- c_get_vorbis_comment metadata cstr
+getVorbisComment :: ByteString -> Metadata -> IO (Maybe Text)
+getVorbisComment name metadata = alloca $ \sizePtr ->
+  B.useAsCString name $ \cstr -> do
+    ptr  <- c_get_vorbis_comment metadata cstr sizePtr
+    size <- fromIntegral <$> peek sizePtr
     if ptr == nullPtr
       then return Nothing
       else do
-        value <- T.drop 1 . T.dropWhile (/= '=') . T.decodeUtf8 <$> B.packCString ptr
+        value <- T.drop 1 . T.dropWhile (/= '=') . T.decodeUtf8
+          <$> B.packCStringLen (ptr, size)
         return (pure value)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_comment"
-  c_get_vorbis_comment :: Metadata -> CString -> IO CString
+  c_get_vorbis_comment :: Metadata -> CString -> Ptr Word32 -> IO CString
