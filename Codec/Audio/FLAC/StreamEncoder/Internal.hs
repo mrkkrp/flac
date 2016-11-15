@@ -198,6 +198,8 @@ encoderSetVerify = c_encoder_set_verify
 foreign import ccall unsafe "FLAC__stream_encoder_set_verify"
   c_encoder_set_verify :: Encoder -> Bool -> IO Bool
 
+-- | Get current encoder state.
+
 encoderGetState :: Encoder -> IO EncoderState
 encoderGetState = fmap toEnum' . c_encoder_get_state
 
