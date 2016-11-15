@@ -61,7 +61,7 @@ import Data.ByteString (ByteString)
 import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Proxy
 import Data.Text (Text)
 import Foreign hiding (void)
@@ -285,6 +285,11 @@ instance MetaValue VorbisVendor where
   type MetaWriteable VorbisVendor = ()
   get VorbisVendor = FlacMeta . withMetaBlock VorbisCommentBlock $
     liftIO . (iteratorGetBlock >=> getVorbisVendor)
+  set VorbisVendor mvalue =
+    FlacMeta . withMetaBlock' VorbisCommentBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (setVorbisVendor block (fromMaybe "" mvalue))
+      setModified
 
 data VorbisComment = VorbisComment VorbisField
 
@@ -315,6 +320,17 @@ instance MetaValue VorbisComment where
   type MetaWriteable VorbisComment = ()
   get (VorbisComment field) = FlacMeta . fmap join . withMetaBlock VorbisCommentBlock $
     liftIO . (iteratorGetBlock >=> getVorbisComment (vorbisFieldName field))
+  set (VorbisComment field) mvalue =
+    FlacMeta . withMetaBlock' VorbisCommentBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      let fieldName = vorbisFieldName field
+      case mvalue of
+        Nothing ->
+          liftBool (deleteVorbisComment fieldName block)
+          -- TODO Need to check here and delete vorbis comment block if it's
+          -- empty now, or maybe the check should happen before writing?
+        Just value -> liftBool (setVorbisComment fieldName value block)
+      setModified
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -330,6 +346,17 @@ withMetaBlock metaBlock m = do
   if res
     then pure <$> m iterator
     else return Nothing
+
+withMetaBlock' :: MetadataType -> (MetaIterator -> Inner a) -> Inner a
+withMetaBlock' metaBlock m = do
+  res      <- findMetaBlock metaBlock
+  iterator <- asks metaIterator
+  if res
+    then m iterator
+    else do
+      block <- liftMaybe (objectNew metaBlock)
+      liftBool (iteratorInsertBlockAfter iterator block)
+      m iterator
 
 -- | Position 'MetaIterator' on first metadata block that is of given
 -- 'MetadataType'. Return 'False' if no such block found.

@@ -13,8 +13,17 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Object
-  ( )
+  ( objectNew )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
-import Foreign
+import Codec.Audio.FLAC.Util
+import Foreign.C.Types
+
+-- | Create a new metadata object given its type.
+
+objectNew :: MetadataType -> IO (Maybe Metadata)
+objectNew = fmap maybePtr . c_object_new . fromEnum'
+
+foreign import ccall unsafe "FLAC__metadata_object_new"
+  c_object_new :: CUInt -> IO Metadata

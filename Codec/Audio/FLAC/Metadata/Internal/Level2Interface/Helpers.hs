@@ -27,11 +27,15 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , getMd5Sum
     -- * Vorbis comment
   , getVorbisVendor
-  , getVorbisComment )
+  , setVorbisVendor
+  , getVorbisComment
+  , setVorbisComment
+  , deleteVorbisComment )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
 import Data.ByteString (ByteString)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Word
 import Foreign
@@ -40,6 +44,7 @@ import Foreign.C.Types
 import qualified Data.ByteString    as B
 import qualified Data.Text          as T
 import qualified Data.Text.Encoding as T
+import qualified Data.Text.Foreign  as T
 
 -- | Get min block size.
 
@@ -108,37 +113,68 @@ foreign import ccall unsafe "FLAC__metadata_get_total_samples"
 -- | Get MD5 sum of original audio data.
 
 getMd5Sum :: Metadata -> IO ByteString
-getMd5Sum metadata = do
-  ptr <- c_get_md5sum metadata
-  B.packCStringLen (ptr, 16)
+getMd5Sum block = do
+  md5SumPtr <- c_get_md5sum block
+  B.packCStringLen (md5SumPtr, 16)
 
 foreign import ccall unsafe "FLAC__metadata_get_md5sum"
   c_get_md5sum :: Metadata -> IO CString
 
--- | Get Vorbis comment: vendor.
+-- | Get Vorbis vendor.
 
 getVorbisVendor :: Metadata -> IO Text
-getVorbisVendor metadata = alloca $ \sizePtr -> do
-  ptr  <- c_get_vorbis_vendor metadata sizePtr
-  size <- fromIntegral <$> peek sizePtr
-  T.decodeUtf8 <$> B.packCStringLen (ptr, size)
+getVorbisVendor block = alloca $ \sizePtr -> do
+  vendorPtr <- c_get_vorbis_vendor block sizePtr
+  size      <- fromIntegral <$> peek sizePtr
+  T.decodeUtf8 <$> B.packCStringLen (vendorPtr, size)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_vendor"
   c_get_vorbis_vendor :: Metadata -> Ptr Word32 -> IO CString
 
+-- | Set Vorbis vendor.
+
+setVorbisVendor :: Metadata -> Text -> IO Bool
+setVorbisVendor block vendor =
+  T.withCStringLen vendor $ \(vendorPtr, size) ->
+    c_set_vorbis_vendor block vendorPtr (fromIntegral size)
+
+foreign import ccall unsafe "FLAC__metadata_set_vorbis_vendor"
+  c_set_vorbis_vendor :: Metadata -> CString -> Word32 -> IO Bool
+
 -- | Get vorbis comment by name.
 
 getVorbisComment :: ByteString -> Metadata -> IO (Maybe Text)
-getVorbisComment name metadata = alloca $ \sizePtr ->
-  B.useAsCString name $ \cstr -> do
-    ptr  <- c_get_vorbis_comment metadata cstr sizePtr
-    size <- fromIntegral <$> peek sizePtr
-    if ptr == nullPtr
+getVorbisComment name block = alloca $ \sizePtr ->
+  B.useAsCString name $ \namePtr -> do
+    commentPtr  <- c_get_vorbis_comment block namePtr sizePtr
+    commentSize <- fromIntegral <$> peek sizePtr
+    if commentPtr == nullPtr
       then return Nothing
       else do
         value <- T.drop 1 . T.dropWhile (/= '=') . T.decodeUtf8
-          <$> B.packCStringLen (ptr, size)
+          <$> B.packCStringLen (commentPtr, commentSize)
         return (pure value)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_comment"
   c_get_vorbis_comment :: Metadata -> CString -> Ptr Word32 -> IO CString
+
+-- | Set (replace or insert if necessary) a vorbis comment.
+
+setVorbisComment :: ByteString -> Text -> Metadata -> IO Bool
+setVorbisComment name value block =
+  T.withCStringLen (T.decodeUtf8 name <> "=" <> value) $
+    \(commentPtr, commentSize) ->
+      c_set_vorbis_comment block commentPtr (fromIntegral commentSize)
+
+foreign import ccall unsafe "FLAC__metadata_set_vorbis_comment"
+  c_set_vorbis_comment :: Metadata -> CString -> Word32 -> IO Bool
+
+-- | Delete a vorbis comment by name. If it doesn't exist, nothing will
+-- happen.
+
+deleteVorbisComment :: ByteString -> Metadata -> IO Bool
+deleteVorbisComment name block =
+  B.useAsCString name (c_delete_vorbis_comment block)
+
+foreign import ccall unsafe "FLAC__metadata_delete_vorbis_comment"
+  c_delete_vorbis_comment :: Metadata -> CString -> IO Bool
