@@ -36,6 +36,6 @@
 
 #include <FLAC/stream_encoder.h>
 
-/* TODO */
+FLAC__bool FLAC__stream_encoder_process_wav(FLAC__StreamEncoder *, const char *);
 
 #endif /* FLAC__STREAM_ENCODER_HELPERS_H */

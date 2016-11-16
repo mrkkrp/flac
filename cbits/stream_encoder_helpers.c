@@ -32,3 +32,9 @@
  */
 
 #include "stream_encoder_helpers.h"
+
+FLAC__bool FLAC__stream_encoder_process_wav
+  (FLAC__StreamEncoder *encoder, const char *source)
+{
+  return true;
+}

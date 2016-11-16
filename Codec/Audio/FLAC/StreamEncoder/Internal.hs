@@ -7,19 +7,19 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around FLAC stream encoder API.
+-- Low-level Haskell wrapper around FLAC stream encoder API, see:
+--
+-- <https://xiph.org/flac/api/group__flac__stream__encoder.html>
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Codec.Audio.FLAC.StreamEncoder.Internal
-  ( -- * Types
-    -- * Encoder
-    encoderNew
+  ( encoderNew
   , encoderDelete
   , encoderSetChannels
   , encoderSetBitsPerSample
   , encoderSetSampleRate
-  , encoderSetCompressionLevel
+  , encoderSetCompression
   , encoderSetBlockSize
   , encoderSetDoMidSideStereo
     -- TODO FLAC__stream_encoder_set_loose_mid_side_stereo
@@ -35,81 +35,15 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
   , encoderSetVerify
   , encoderGetState
   , encoderInitFile
-  , encoderFinish
- )
+  , encoderFinish )
 where
 
--- https://github.com/xiph/flac/blob/master/examples/c/encode/file/main.c
-
+import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Codec.Audio.FLAC.Util
 import Data.Void
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-
-----------------------------------------------------------------------------
--- Types
-
-newtype Encoder = Encoder (Ptr Void)
-
-data EncoderInitStatus
-  = EncoderInitStatusOK
-    -- ^ Initialization was successful.
-  | EncoderInitStatusEncoderError
-    -- ^ General failure to set up encoder.
-  | EncoderInitStatusUnsupportedCointainer
-    -- ^ The library was not compiled with support for the given container
-    -- format.
-  | EncoderInitStatusInvalidCallbacks
-    -- ^ A required callback was not supplied.
-  | EncoderInitStatusInvalidNumberOfChannels
-    -- ^ The encoder has an invalid setting for number of channels.
-  | EncoderInitStatusInvalidBitsPerSample
-    -- ^ The encoder has an invalid setting for bits-per-sample. FLAC
-    -- supports 4-32 bps but the reference encoder currently supports only
-    -- up to 24 bps.
-  | EncoderInitStatusInvalidSampleRate
-    -- ^ The encoder has an invalid setting for the input sample rate.
-  | EncoderInitStatusInvalidBlockSize
-    -- ^ The encoder has an invalid setting for the block size.
-  | EncoderInitStatusInvalidMaxLpcOrder
-    -- ^ The encoder has an invalid setting for the maximum LPC order.
-  | EncoderInitStatusInvalidQlpCoeffPrecision
-    -- ^ The encoder has an invalid setting for the precision of the
-    -- quantized linear predictor coefficients.
-  | EncoderInitStatusBlockSizeTooSmallForLpcOrder
-    -- ^ The specified block size is less than the maximum LPC order.
-  | EncoderInitStatusNotStreamable
-    -- ^ The encoder is bound to the Subset but other settings violate it.
-  | EncoderInitStatusInvalidMetadata
-    -- ^ The metadata input to the encoder is invalid (should never happen
-    -- with this binding).
-  deriving (Show, Read, Eq, Ord, Bounded, Enum)
-
-data EncoderState
-  = EncoderStateOK
-    -- ^ The encoder is in the normal OK state and samples can be processed
-  | EncoderStateUninitialized
-    -- ^ The encoder is in the uninitialized state
-  | EncoderStateOggError
-    -- ^ An error occurred in the underlying Ogg layer
-  | EncoderStateVerifyDecoderError
-    -- ^ An error occurred in the underlying verify stream decoder
-  | EncoderStateVerifyMismatchInAudioData
-    -- ^ The verify decoder detected a mismatch between the original audio
-    -- signal and the decoded audio signal
-  | EncoderStateClientError
-    -- ^ One of the callbacks returned a fatal error
-  | EncoderStateIOError
-    -- ^ An I\/O error occurred while opening\/reading\/writing a file
-  | EncoderStateFramingError
-    -- ^ An error occurred while writing the stream
-  | EnocderStateMemoryAllocationError
-    -- ^ Memory allocation failed
-  deriving (Show, Read, Eq, Ord, Bounded, Enum)
-
-----------------------------------------------------------------------------
--- Encoder
 
 -- | Create a new stream encoder instance with default settings. In the case
 -- of memory allocation problem 'Nothing' is returned.
@@ -162,8 +96,8 @@ foreign import ccall unsafe "FLAC__stream_encoder_set_sample_rate"
 -- least compression) to 8 (slowest, most compression). A value higher than
 -- 8 will be treated as 8. Return 'False' if encoder is already initialized.
 
-encoderSetCompressionLevel :: Encoder -> Word32 -> IO Bool
-encoderSetCompressionLevel encoder level =
+encoderSetCompression :: Encoder -> Word32 -> IO Bool
+encoderSetCompression encoder level =
   c_encoder_set_compression_level encoder (fromIntegral level)
 
 foreign import ccall unsafe "FLAC__stream_encoder_set_compression_level"
@@ -211,12 +145,10 @@ foreign import ccall unsafe "FLAC__stream_encoder_get_state"
 encoderInitFile :: Encoder -> FilePath -> IO EncoderInitStatus
 encoderInitFile encoder path =
   withCString path $ \cstr ->
-    toEnum' <$> c_encoder_init_file encoder cstr
+    toEnum' <$> c_encoder_init_file encoder cstr nullPtr nullPtr
 
 foreign import ccall unsafe "FLAC__stream_encoder_init_file"
-  c_encoder_init_file :: Encoder -> CString -> IO CUInt
-
--- TODO FLAC__stream_encoder_process probably will need some writing in C
+  c_encoder_init_file :: Encoder -> CString -> Ptr Void -> Ptr Void -> IO CUInt
 
 -- | Finish the encoding process and release resources (also resets encoder
 -- and its settings). Return 'False' in case of trouble.
