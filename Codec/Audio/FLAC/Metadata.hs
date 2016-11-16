@@ -471,8 +471,9 @@ instance MetaValue VorbisVendor where
 --
 -- <https://www.xiph.org/vorbis/doc/v-comment.html>
 --
--- And 'TrackTotal' is a popular non-standard field to store total number of
--- tracks in a release.
+-- 'TrackTotal' is a popular non-standard field to store total number of
+-- tracks in a release. The library also supports standard replay gain
+-- comments.
 --
 -- __Writable__ optional attribute represented as a 'Maybe' 'Text'.
 
@@ -519,6 +520,10 @@ data VorbisField
                        -- email address, the physical address of the
                        -- producing label.
   | ISRC               -- ^ ISRC number for the track.
+  | RGTrackPeak        -- ^ Replay gain track peak, e.g. “0.99996948”.
+  | RGTrackGain        -- ^ Replay gain track gain, e.g. “-7.89 dB”.
+  | RGAlbumPeak        -- ^ Replay gain album peak, e.g. “0.99996948”.
+  | RGAlbumGain        -- ^ Replay gain album gain, e.g. “-7.89 dB”.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 instance MetaValue VorbisComment where
@@ -656,4 +661,8 @@ setModified = do
 -- | Map 'VorbisField' to its ASCII name in form of a 'ByteString'.
 
 vorbisFieldName :: VorbisField -> ByteString
-vorbisFieldName = B8.pack . fmap toUpper . show
+vorbisFieldName RGTrackPeak = "REPLAYGAIN_TRACK_PEAK"
+vorbisFieldName RGTrackGain = "REPLAYGAIN_TRACK_GAIN"
+vorbisFieldName RGAlbumPeak = "REPLAYGAIN_ALBUM_PEAK"
+vorbisFieldName RGAlbumGain = "REPLAYGAIN_ALBUM_GAIN"
+vorbisFieldName field = (B8.pack . fmap toUpper . show) field
