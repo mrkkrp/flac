@@ -626,13 +626,13 @@ isMetaBlockEmpty :: MetadataType -> Metadata -> IO Bool
 isMetaBlockEmpty VorbisCommentBlock block = isVorbisCommentEmpty block
 isMetaBlockEmpty _ _ = return False
 
--- | Lift an action that may return 'Nothing' on failure into 'FlacMeta'
--- monad taking care of error reporting.
+-- | Lift an action that may return 'Nothing' on failure into 'Inner' monad
+-- taking care of error reporting.
 
 liftMaybe :: IO (Maybe a) -> Inner a
 liftMaybe m = liftIO m >>= maybe throwStatus return
 
--- | Lift an action that returns 'False' on failure into 'FlacMeta' monad
+-- | Lift an action that returns 'False' on failure into 'Inner' monad
 -- taking care of error reporting.
 
 liftBool :: IO Bool -> Inner ()
