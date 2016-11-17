@@ -78,6 +78,7 @@ module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
     FlacMeta
   , FlacMetaSettings (..)
+  , FlacMetaException (..)
   , MetaChainStatus (..)
   , runFlacMeta
     -- * Meta values
@@ -103,15 +104,15 @@ module Codec.Audio.FLAC.Metadata
   , wipeApplications
     -- * Debugging and testing
   , MetadataType (..)
-  , allMetadataBlocks )
+  , getMetaChain )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
 import Codec.Audio.FLAC.Metadata.Internal.Object
 import Codec.Audio.FLAC.Metadata.Internal.Types
-import Control.Exception (bracket)
 import Control.Monad
+import Control.Monad.Catch
 import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Bool (bool)
@@ -120,11 +121,13 @@ import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, listToMaybe)
 import Data.Text (Text)
 import Foreign hiding (void)
+import Prelude hiding (iterate)
 import System.IO
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.List.NonEmpty    as NE
 
 #if MIN_VERSION_base(4,9,0)
 import Data.Kind (Constraint)
@@ -137,7 +140,7 @@ import GHC.Exts (Constraint)
 -- Metadata manipulation API
 
 -- | An opaque monad for reading and writing of FLAC metadata. The monad is
--- home for 'retrieve' and @('=->')@ functions and can be run with
+-- the home for 'retrieve' and @('=->')@ functions and can be run with
 -- 'runFlacMeta'.
 
 newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
@@ -145,14 +148,13 @@ newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
 
 -- | Non-public shortcut for inner monad stack of 'FlacMeta'.
 
-type Inner a = ExceptT MetaChainStatus (ReaderT Context IO) a
+type Inner a = ReaderT Context IO a
 
 -- | Context that 'Inner' passes around.
 
 data Context = Context
   { metaChain    :: MetaChain     -- ^ Metadata chain
-  , metaIterator :: MetaIterator  -- ^ Iterator to walk the chain
-  , metaModified :: IORef Bool    -- ^ A “modified” flag
+  , metaModified :: IORef Bool    -- ^ “Modified” flag
   , metaFileSize :: Integer       -- ^ Size of target file
   }
 
@@ -194,44 +196,33 @@ instance Default FlacMetaSettings where
 -- pass 'def' unless you know what you are doing. 'FilePath' specifies
 -- location of FLAC file to read\/edit in the file system. 'FlacMeta' is a
 -- monadic action that describes what to do with metadata. Compose it using
--- 'retrieve' and @('=->')@. The output value is 'Left' 'MetaChainStatus' in
--- case of failure (that should be helpful for figuring out what went wrong)
--- or result of monadic computation inside 'Right' on success.
+-- 'retrieve' and @('=->')@.
 --
 -- The action will throw 'Data.Text.Encoding.Error.UnicodeException' if text
 -- data like Vorbis Comment entries cannot be read as UTF-8-encoded value.
+--
+-- If a problem occurs, 'FlacMetaException' is thrown with attached
+-- 'MetaChainStatus' that should help investigating what went wrong.
 
 runFlacMeta :: MonadIO m
   => FlacMetaSettings  -- ^ Settings to use
   -> FilePath          -- ^ File to operate on
   -> FlacMeta a        -- ^ Actions to perform
-  -> m (Either MetaChainStatus a) -- ^ The result
-runFlacMeta FlacMetaSettings {..} path m =
-  liftIO (bracket acquire release action)
-  where
-    acquire = (,) <$> chainNew <*> iteratorNew
-    release (mchain, miterator) = do
-      forM_ mchain    chainDelete
-      forM_ miterator iteratorDelete
-    action stuff =
-      case stuff of
-        (Just metaChain, Just metaIterator) -> do
-          metaModified <- newIORef False
-          metaFileSize <- withFile path ReadMode hFileSize
-          flip runReaderT Context {..} . runExceptT $ do
-            liftBool (chainRead metaChain path)
-            liftIO (iteratorInit metaIterator metaChain)
-            result   <- unFlacMeta m
-            modified <- liftIO (readIORef metaModified)
-            when modified $ do
-              when flacMetaAutoVacuum applyVacuum
-              when flacMetaSortPadding $
-                liftIO (chainSortPadding metaChain)
-              liftBool (chainWrite metaChain
-                                   flacMetaUsePadding
-                                   flacMetaPreserveFileStats)
-            return result
-        _ -> return (Left MetaChainStatusMemoryAllocationError)
+  -> m a               -- ^ The result
+runFlacMeta FlacMetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
+  metaModified <- newIORef False
+  metaFileSize <- withFile path ReadMode hFileSize
+  flip runReaderT Context {..} $ do
+    liftBool (chainRead metaChain path)
+    result   <- unFlacMeta m
+    modified <- liftIO (readIORef metaModified)
+    when modified $ do
+      when flacMetaAutoVacuum applyVacuum
+      when flacMetaSortPadding $
+        liftIO (chainSortPadding metaChain)
+      liftBool
+        (chainWrite metaChain flacMetaUsePadding flacMetaPreserveFileStats)
+    return result
 
 ----------------------------------------------------------------------------
 -- Meta values
@@ -566,13 +557,15 @@ instance MetaValue VorbisComment where
   retrieve (VorbisComment field) =
     FlacMeta . fmap join . withMetaBlock VorbisCommentBlock $
       liftIO . (iteratorGetBlock >=> getVorbisComment (vorbisFieldName field))
-  VorbisComment field =-> mvalue =
+  VorbisComment field =-> Nothing =
+    void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (deleteVorbisComment (vorbisFieldName field) block)
+      setModified
+  VorbisComment field =-> Just value =
     FlacMeta . withMetaBlock' VorbisCommentBlock $ \i -> do
       block <- liftIO (iteratorGetBlock i)
-      let fieldName = vorbisFieldName field
-      liftBool $ case mvalue of
-        Nothing    -> deleteVorbisComment fieldName block
-        Just value -> setVorbisComment fieldName value block
+      liftBool (setVorbisComment (vorbisFieldName field) value block)
       setModified
 
 ----------------------------------------------------------------------------
@@ -583,12 +576,14 @@ instance MetaValue VorbisComment where
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
   void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i ->
-    liftBool (iteratorDeleteBlock i False) -- FIXME
+    liftBool (iteratorDeleteBlock i False)
 
 -- | Delete all “Application” metadata blocks.
 
 wipeApplications :: FlacMeta ()
-wipeApplications = undefined -- TODO we need proper traversing primitive
+wipeApplications =
+  void . FlacMeta . withMetaBlock ApplicationBlock $ \i ->
+    liftBool (iteratorDeleteBlock i False)
 
 ----------------------------------------------------------------------------
 -- Debugging and testing
@@ -596,8 +591,10 @@ wipeApplications = undefined -- TODO we need proper traversing primitive
 -- | Return list of all 'MetadataType's of metadata blocks detected in
 -- order.
 
-allMetadataBlocks :: FlacMeta (NonEmpty MetadataType)
-allMetadataBlocks = undefined -- TODO
+getMetaChain :: FlacMeta (NonEmpty MetadataType)
+getMetaChain = FlacMeta $ do
+  chain <- asks metaChain
+  NE.fromList <$> withIterator chain (fmap Just . liftIO . iteratorGetBlockType)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -607,24 +604,28 @@ allMetadataBlocks = undefined -- TODO
 -- applies given function to get the final value.
 
 inStreamInfo :: (Metadata -> IO a) -> FlacMeta a
-inStreamInfo f = FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
-  liftIO . (iteratorGetBlock >=> f)
+inStreamInfo f =
+  FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
+    liftIO . (iteratorGetBlock >=> f)
 
 -- | Given 'MetadataType' (type of metadata block) and an action that uses
 -- an iterator which points to a block of specified type, perform that
 -- action and return its result wrapped in 'Just' if block of requested type
--- was found, 'Nothing' otherwise.
+-- was found, 'Nothing' otherwise. If there are several blocks of given
+-- type, action will be performed for each of them, but only first result
+-- will be returned.
 
 withMetaBlock
   :: MetadataType      -- ^ Type of block to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
-withMetaBlock metaBlock m = do
-  res      <- findMetaBlock metaBlock
-  iterator <- asks metaIterator
-  if res
-    then pure <$> m iterator
-    else return Nothing
+withMetaBlock given f = do
+  chain <- asks metaChain
+  fmap listToMaybe . withIterator chain $ \i -> do
+    actual <- liftIO (iteratorGetBlockType i)
+    if actual == given
+      then Just <$> f i
+      else return Nothing
 
 -- | Just like 'withMetaBlock', but creates a new block of requested type if
 -- no block of such type can be found.
@@ -633,13 +634,21 @@ withMetaBlock'
   :: MetadataType      -- ^ Type of block to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner a           -- ^ Result
-withMetaBlock' metaBlock m = do
-  res      <- findMetaBlock metaBlock
-  iterator <- asks metaIterator
-  unless res $ do
-    block <- liftMaybe (objectNew metaBlock)
-    liftBool (iteratorInsertBlockAfter iterator block)
-  m iterator
+withMetaBlock' blockType f = do
+  chain <- asks metaChain
+  res   <- withMetaBlock blockType f
+  case res of
+    Nothing -> fmap head . withIterator chain $ \i -> do
+      actual <- liftIO (iteratorGetBlockType i)
+      if actual == StreamInfoBlock
+        then
+          let acquire = liftMaybe (objectNew blockType)
+              release = liftIO . objectDelete
+          in bracketOnError acquire release $ \block -> do
+               liftBool (iteratorInsertBlockAfter i block)
+               Just <$> f i
+        else return Nothing
+    Just x -> return x
 
 -- | The same as 'withMetaBlock' but it searches for a block of type
 -- 'ApplicationBlock' having specified application id.
@@ -648,58 +657,61 @@ withApplicationBlock
   :: ByteString        -- ^ Application id to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
-withApplicationBlock = undefined -- TODO
+withApplicationBlock givenId f = do
+  chain <- asks metaChain
+  fmap listToMaybe . withIterator chain $ \i -> do
+    actual <- liftIO (iteratorGetBlockType i)
+    if actual == ApplicationBlock
+      then do
+        block    <- liftIO (iteratorGetBlock i)
+        actualId <- liftIO (getApplicationId block)
+        if actualId == givenId
+          then Just <$> f i
+          else return Nothing
+      else return Nothing
 
--- | The same as 'withMetaBlock'', but also checks application IDs.
+-- | Just like 'applicationBlock', but creates a new application block with
+-- given id if no such block can be found.
 
 withApplicationBlock'
-  :: ByteString
-  -> (MetaIterator -> Inner a)
-  -> Inner a
-withApplicationBlock' = undefined -- TODO
-
--- | Position 'MetaIterator' on first metadata block that is of given
--- 'MetadataType'. Return 'False' if no such block was found.
-
-findMetaBlock :: MetadataType -> Inner Bool
-findMetaBlock given = do
-  chain    <- asks metaChain
-  iterator <- asks metaIterator
-  actual   <- liftIO (iteratorGetBlockType iterator)
-  let go hasMore = do
-        actual' <- iteratorGetBlockType iterator
-        if actual' == given
-          then return True
-          else if hasMore
-                 then iteratorNext iterator >>= go
-                 else return False
-  if actual == given
-    then return True
-    else liftIO $ do
-      iteratorInit iterator chain
-      go True
+  :: ByteString        -- ^ Application id to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner a           -- ^ Result
+withApplicationBlock' givenId f = do
+  chain <- asks metaChain
+  res   <- withApplicationBlock givenId f
+  case res of
+    Nothing -> fmap head . withIterator chain $ \i -> do
+      actual <- liftIO (iteratorGetBlockType i)
+      if actual == StreamInfoBlock
+        then
+          let acquire = liftMaybe (objectNew ApplicationBlock)
+              release = liftIO . objectDelete
+          in bracketOnError acquire release $ \block -> do
+               liftIO (setApplicationId block givenId)
+               liftBool (iteratorInsertBlockAfter i block)
+               Just <$> f i
+        else return Nothing
+    Just x -> return x
 
 -- | Go through all metadata blocks and delete empty ones.
 
 applyVacuum :: Inner ()
 applyVacuum = do
-  chain    <- asks metaChain
-  iterator <- asks metaIterator
-  liftIO (iteratorInit iterator chain)
-  let go hasMore = do
-        blockType <- liftIO (iteratorGetBlockType iterator)
-        block     <- liftIO (iteratorGetBlock     iterator)
-        empty     <- liftIO (isMetaBlockEmpty blockType block)
-        when empty $
-          liftBool (iteratorDeleteBlock iterator False)
-        when hasMore $
-          liftIO (iteratorNext iterator) >>= go
-  go True
+  chain <- asks metaChain
+  void . withIterator chain $ \i -> do
+    blockType <- liftIO (iteratorGetBlockType i)
+    block     <- liftIO (iteratorGetBlock     i)
+    empty     <- liftIO (isMetaBlockEmpty blockType block)
+    when empty $
+      liftBool (iteratorDeleteBlock i False)
+    return Nothing
 
 -- | Determine if given metadata block is empty.
 
-isMetaBlockEmpty :: MetadataType -> Metadata -> IO Bool
-isMetaBlockEmpty VorbisCommentBlock block = isVorbisCommentEmpty block
+isMetaBlockEmpty :: MonadIO m => MetadataType -> Metadata -> m Bool
+isMetaBlockEmpty VorbisCommentBlock block =
+  liftIO (isVorbisCommentEmpty block)
 isMetaBlockEmpty _ _ = return False
 
 -- | Lift an action that may return 'Nothing' on failure into 'Inner' monad
@@ -720,7 +732,7 @@ throwStatus :: Inner a
 throwStatus = do
   chain  <- asks metaChain
   status <- liftIO (chainStatus chain)
-  throwError status
+  throwM (FlacMetaException status)
 
 -- | Specify that the metadata chain has been modified.
 

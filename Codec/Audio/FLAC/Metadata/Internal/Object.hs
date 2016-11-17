@@ -14,7 +14,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Object
-  ( objectNew )
+  ( objectNew
+  , objectDelete )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
@@ -28,3 +29,11 @@ objectNew = fmap maybePtr . c_object_new . fromEnum'
 
 foreign import ccall unsafe "FLAC__metadata_object_new"
   c_object_new :: CUInt -> IO Metadata
+
+-- | Free a metadata object.
+
+objectDelete :: Metadata -> IO ()
+objectDelete = c_object_delete
+
+foreign import ccall unsafe "FLAC__metadata_object_delete"
+  c_object_delete :: Metadata -> IO ()

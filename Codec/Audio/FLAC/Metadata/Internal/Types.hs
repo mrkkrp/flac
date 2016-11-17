@@ -14,9 +14,11 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , MetaIterator (..)
   , Metadata (..)
   , MetadataType (..)
+  , FlacMetaException (..)
   , MetaChainStatus (..) )
 where
 
+import Control.Exception (Exception)
 import Data.Void
 import Foreign
 
@@ -45,6 +47,15 @@ data MetadataType
   | PictureType        -- ^ Picture block
   | UndefinedType      -- ^ Undefined block
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | Exception that is thrown when manipulation FLAC metadata failed for
+-- some reason. The 'MetaChainStatus' may be useful for figuring out what
+-- went wrong.
+
+data FlacMetaException = FlacMetaException MetaChainStatus
+  deriving (Eq, Show, Read)
+
+instance Exception FlacMetaException
 
 -- | Enumeration of meta chain statuses.
 

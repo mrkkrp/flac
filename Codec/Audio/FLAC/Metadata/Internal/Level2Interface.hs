@@ -12,39 +12,48 @@
 --
 -- <https://xiph.org/flac/api/group__flac__metadata__level2.html>.
 
+{-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE ScopedTypeVariables      #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Level2Interface
   ( -- * Chain
-    chainNew
-  , chainDelete
+    withChain
   , chainStatus
   , chainRead
   , chainWrite
   , chainSortPadding
     -- * Iterator
-  , iteratorNew
-  , iteratorDelete
-  , iteratorInit
-  , iteratorNext
-  , iteratorPrev
+  , withIterator
   , iteratorGetBlockType
   , iteratorGetBlock
   , iteratorSetBlock
   , iteratorDeleteBlock
-  , iteratorInsertBlockBefore
   , iteratorInsertBlockAfter )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
 import Codec.Audio.FLAC.Util
+import Control.Monad.Catch
+import Control.Monad.IO.Class (MonadIO (..))
 import Foreign.C.String
 import Foreign.C.Types
+import Prelude hiding (iterate)
 
 ----------------------------------------------------------------------------
 -- Chain
+
+-- | Create and use a 'MetaChain' (metadata chain). The chain is guaranteed
+-- to be freed even in case of exception.
+--
+-- If memory for the chain cannot be allocated, corresponding
+-- 'FlacMetaException' is raised.
+
+withChain :: (MetaChain -> IO a) -> IO a
+withChain f = bracket chainNew (mapM_ chainDelete) $ \mchain ->
+  case mchain of
+    Nothing -> throwM
+      (FlacMetaException MetaChainStatusMemoryAllocationError)
+    Just x -> f x
 
 -- | Create a new 'MetaChain'. In the case of memory allocation problem
 -- 'Nothing' is returned.
@@ -112,6 +121,40 @@ foreign import ccall unsafe "FLAC__metadata_chain_sort_padding"
 ----------------------------------------------------------------------------
 -- Iterator
 
+-- | Traverse all metadata blocks from beginning to end collecting 'Just'
+-- values and possibly performing some actions. This is the only way to
+-- traverse metadata chain and get access to 'MetaIterator' and by exporting
+-- only this, we eliminate certain class of possible errors making finding
+-- and traversing metadata blocks always correct and safe.
+--
+-- If memory for the iterator cannot be allocated, corresponding
+-- 'FlacMetaException' is raised.
+
+withIterator :: (MonadMask m, MonadIO m)
+  => MetaChain         -- ^ Metadata chain to traverse
+  -> (MetaIterator -> m (Maybe a)) -- ^ Action to perform on each block
+  -> m [a]             -- ^ Accumulated results
+withIterator chain f = bracket acquire release action
+  where
+    acquire = liftIO iteratorNew
+    release = mapM_ (liftIO . iteratorDelete)
+    action mi =
+      case mi of
+        Nothing -> throwM
+          (FlacMetaException MetaChainStatusMemoryAllocationError)
+        Just i -> do
+          liftIO (iteratorInit i chain)
+          let go hasMore = do
+                res <- f i
+                let next =
+                      if hasMore
+                        then liftIO (iteratorNext i) >>= go
+                        else return []
+                case res of
+                  Nothing -> next
+                  Just  x -> (x :) <$> next
+          go True
+
 -- | Create a new iterator. Return 'Nothing' if there was a problem with
 -- memory allocation.
 
@@ -151,15 +194,6 @@ iteratorNext = c_iterator_next
 foreign import ccall unsafe "FLAC__metadata_iterator_next"
   c_iterator_next :: MetaIterator -> IO Bool
 
--- | Move the iterator backward one metadata block, returning 'False' if
--- already at the beginning.
-
-iteratorPrev :: MetaIterator -> IO Bool
-iteratorPrev = c_iterator_prev
-
-foreign import ccall unsafe "FLAC__metadata_iterator_prev"
-  c_iterator_prev :: MetaIterator -> IO Bool
-
 -- | Get the type of the metadata block at the current position. Useful for
 -- fast searching.
 
@@ -196,21 +230,6 @@ iteratorDeleteBlock = c_iterator_delete_block
 
 foreign import ccall unsafe "FLAC__metadata_iterator_delete_block"
   c_iterator_delete_block :: MetaIterator -> Bool -> IO Bool
-
--- | Insert a new 'Metadata' block before the current block. You cannot
--- insert a block before the first 'StreamInfo' block. You cannot insert a
--- 'StreamInfo' block as there can be only one, the one that already exists
--- at the head when you read in a chain. The chain takes ownership of the
--- new block and it will be deleted when the chain is deleted. The iterator
--- will be left pointing to the new block.
---
--- The function returns 'False' if something went wrong.
-
-iteratorInsertBlockBefore :: MetaIterator -> Metadata -> IO Bool
-iteratorInsertBlockBefore = c_iterator_insert_block_before
-
-foreign import ccall unsafe "FLAC__metadata_iterator_insert_block_before"
-  c_iterator_insert_block_before :: MetaIterator -> Metadata -> IO Bool
 
 -- | Insert a new block after the current block. You cannot insert a
 -- 'StreamInfo' block as there can be only one, the one that already exists
