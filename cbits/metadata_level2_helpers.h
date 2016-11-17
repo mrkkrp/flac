@@ -37,6 +37,8 @@
 #include <FLAC/format.h>
 #include <FLAC/metadata.h>
 
+/* Stream info */
+
 unsigned FLAC__metadata_get_min_blocksize(FLAC__StreamMetadata *);
 unsigned FLAC__metadata_get_max_blocksize(FLAC__StreamMetadata *);
 unsigned FLAC__metadata_get_min_framesize(FLAC__StreamMetadata *);
@@ -46,6 +48,16 @@ unsigned FLAC__metadata_get_channels(FLAC__StreamMetadata *);
 unsigned FLAC__metadata_get_bits_per_sample(FLAC__StreamMetadata *);
 FLAC__uint64 FLAC__metadata_get_total_samples(FLAC__StreamMetadata *);
 FLAC__byte *FLAC__metadata_get_md5sum(FLAC__StreamMetadata *);
+
+/* Application */
+
+FLAC__byte *FLAC__metadata_get_application_id(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_application_data(FLAC__StreamMetadata *, unsigned *);
+void FLAC__metadata_set_application_id(FLAC__StreamMetadata *, FLAC__byte *);
+FLAC__bool FLAC__metadata_set_application_data(FLAC__StreamMetadata *, FLAC__byte *, unsigned);
+
+/* Vorbis comment */
+
 FLAC__byte *FLAC__metadata_get_vorbis_vendor(FLAC__StreamMetadata *, FLAC__uint32 *);
 FLAC__bool FLAC__metadata_set_vorbis_vendor(FLAC__StreamMetadata *, FLAC__byte *, FLAC__uint32);
 FLAC__byte *FLAC__metadata_get_vorbis_comment(FLAC__StreamMetadata *, const char*, FLAC__uint32 *);

@@ -33,6 +33,8 @@
 
 #include "metadata_level2_helpers.h"
 
+/* Stream info */
+
 unsigned FLAC__metadata_get_min_blocksize(FLAC__StreamMetadata *block)
 {
   return block->data.stream_info.min_blocksize;
@@ -77,6 +79,36 @@ FLAC__byte *FLAC__metadata_get_md5sum(FLAC__StreamMetadata *block)
 {
   return block->data.stream_info.md5sum;
 }
+
+/* Application */
+
+FLAC__byte *FLAC__metadata_get_application_id(FLAC__StreamMetadata *block)
+{
+  return block->data.application.id;
+}
+
+FLAC__byte *FLAC__metadata_get_application_data
+  (FLAC__StreamMetadata *block, unsigned *length)
+{
+  *length = block->length - 4;
+  return block->data.application.data;
+}
+
+void FLAC__metadata_set_application_id
+  (FLAC__StreamMetadata *block, FLAC__byte *id)
+{
+  unsigned i;
+  for (i = 0; i < 4; i++)
+    *(block->data.application.id + i) = *(id + i);
+}
+
+FLAC__bool FLAC__metadata_set_application_data
+  (FLAC__StreamMetadata *block, FLAC__byte *data, unsigned length)
+{
+  return FLAC__metadata_object_application_set_data(block, data, length, true);
+}
+
+/* Vorbis comment */
 
 FLAC__byte *FLAC__metadata_get_vorbis_vendor
   (FLAC__StreamMetadata *block, FLAC__uint32 *length)

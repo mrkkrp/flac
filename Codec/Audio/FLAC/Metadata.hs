@@ -52,8 +52,8 @@
 -- === Low-level details
 --
 -- The implementation uses the reference implementation of FLAC — libFLAC (C
--- library) under the hood. This means you'll need version 1.3.1 of libFLAC
--- (released 24 Nov 2014) installed for the binding to work.
+-- library) under the hood. This means you'll need at least version 1.3.0 of
+-- libFLAC (released 26 May 2013) installed for the binding to work.
 --
 -- This module in particular uses level 2 metadata interface and it's not
 -- possible to choose other interface (such as level 0 and 1). This should
@@ -94,11 +94,13 @@ module Codec.Audio.FLAC.Metadata
   , BitRate (..)
   , MD5Sum (..)
   , Duration (..)
+  , Application (..)
   , VorbisVendor (..)
   , VorbisComment (..)
   , VorbisField (..)
     -- * Extra functionality
-  , wipeVorbisComment )
+  , wipeVorbisComment
+  , wipeApplications )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
@@ -444,6 +446,32 @@ instance MetaValue Duration where
     sampleRate   <- fromIntegral <$> retrieve SampleRate
     return (totalSamples / sampleRate)
 
+-- | Application metadata. The 'ByteString' argument to 'Application' data
+-- constructor (application's ID) should be four bytes long. If it's too
+-- short, null bytes will be appended to it to make it four bytes long. If
+-- it's too long, it will be truncated.
+--
+-- __Writable__ optional attribute represented as a 'Maybe' 'ByteString'.
+
+data Application = Application ByteString
+
+instance MetaValue Application where
+  type MetaType Application = Maybe ByteString
+  type MetaWritable Application = ()
+  retrieve (Application appId) =
+    FlacMeta . withApplicationBlock appId $
+      liftIO . (iteratorGetBlock >=> getApplicationData)
+  Application appId =-> Nothing =
+    void . FlacMeta . withApplicationBlock appId $ \i -> do
+      liftBool (iteratorDeleteBlock i False)
+      setModified
+  Application appId =-> Just data' =
+    FlacMeta . withApplicationBlock' appId $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftIO (setApplicationId block appId)
+      liftBool (setApplicationData block data')
+      setModified
+
 -- | Vorbis “vendor” comment. When “Vorbis Comment” metadata block is
 -- present, the “vendor” entry is always in there, so when you delete it (by
 -- @'VorbisVendor' '=->' 'Nothing'@), you really set it to an empty string
@@ -549,7 +577,12 @@ instance MetaValue VorbisComment where
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
   void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i ->
-    liftBool (iteratorDeleteBlock i False)
+    liftBool (iteratorDeleteBlock i False) -- FIXME
+
+-- | Delete all application metadata.
+
+wipeApplications :: FlacMeta ()
+wipeApplications = undefined -- TODO we need proper traversing primitive
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -567,7 +600,10 @@ inStreamInfo f = FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
 -- action and return its result wrapped in 'Just' if block of requested type
 -- was found, 'Nothing' otherwise.
 
-withMetaBlock :: MetadataType -> (MetaIterator -> Inner a) -> Inner (Maybe a)
+withMetaBlock
+  :: MetadataType      -- ^ Type of block to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
 withMetaBlock metaBlock m = do
   res      <- findMetaBlock metaBlock
   iterator <- asks metaIterator
@@ -578,7 +614,10 @@ withMetaBlock metaBlock m = do
 -- | Just like 'withMetaBlock', but creates a new block of requested type if
 -- no block of such type can be found.
 
-withMetaBlock' :: MetadataType -> (MetaIterator -> Inner a) -> Inner a
+withMetaBlock'
+  :: MetadataType      -- ^ Type of block to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner a           -- ^ Result
 withMetaBlock' metaBlock m = do
   res      <- findMetaBlock metaBlock
   iterator <- asks metaIterator
@@ -586,6 +625,23 @@ withMetaBlock' metaBlock m = do
     block <- liftMaybe (objectNew metaBlock)
     liftBool (iteratorInsertBlockAfter iterator block)
   m iterator
+
+-- | The same as 'withMetaBlock' but it searches for a block of type
+-- 'ApplicationBlock' having specified application id.
+
+withApplicationBlock
+  :: ByteString        -- ^ Application id to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withApplicationBlock = undefined -- TODO
+
+-- | The same as 'withMetaBlock'', but also checks application IDs.
+
+withApplicationBlock'
+  :: ByteString
+  -> (MetaIterator -> Inner a)
+  -> Inner a
+withApplicationBlock' = undefined -- TODO
 
 -- | Position 'MetaIterator' on first metadata block that is of given
 -- 'MetadataType'. Return 'False' if no such block was found.

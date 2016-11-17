@@ -26,6 +26,11 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , getBitsPerSample
   , getTotalSamples
   , getMd5Sum
+    -- * Application
+  , getApplicationId
+  , getApplicationData
+  , setApplicationId
+  , setApplicationData
     -- * Vorbis comment
   , getVorbisVendor
   , setVorbisVendor
@@ -124,6 +129,52 @@ getMd5Sum block = do
 
 foreign import ccall unsafe "FLAC__metadata_get_md5sum"
   c_get_md5sum :: Metadata -> IO CString
+
+----------------------------------------------------------------------------
+-- Application
+
+-- | Get application id from given 'Metadata' block.
+
+getApplicationId :: Metadata -> IO ByteString
+getApplicationId block = do
+  idPtr <- c_get_application_id block
+  B.packCStringLen (idPtr, 4)
+
+foreign import ccall unsafe "FLAC__metadata_get_application_id"
+  c_get_application_id :: Metadata -> IO CString
+
+-- | Get data from given application metadata block.
+
+getApplicationData :: Metadata -> IO ByteString
+getApplicationData block = alloca $ \sizePtr -> do
+  dataPtr <- c_get_application_data block sizePtr
+  size    <- fromIntegral <$> peek sizePtr
+  B.packCStringLen (dataPtr, size)
+
+foreign import ccall unsafe "FLAC__metadata_get_application_data"
+  c_get_application_data :: Metadata -> Ptr CUInt -> IO CString
+
+-- | Set application id for given metadata block.
+
+setApplicationId :: Metadata -> ByteString -> IO ()
+setApplicationId block id' =
+  B.useAsCString id'' (c_set_application_id block)
+  where
+    id'' = B.take 4 (id' <> B.replicate 4 0x00)
+
+foreign import ccall unsafe "FLAC__metadata_set_application_id"
+  c_set_application_id :: Metadata -> CString -> IO ()
+
+-- | Set application data for given metadata block.
+
+setApplicationData :: Metadata -> ByteString -> IO Bool
+setApplicationData block data' =
+  B.useAsCString data' $ \dataPtr -> do
+    let size = fromIntegral (B.length data')
+    c_set_application_data block dataPtr size
+
+foreign import ccall unsafe "FLAC__metadata_set_application_data"
+  c_set_application_data :: Metadata -> CString -> CUInt -> IO Bool
 
 ----------------------------------------------------------------------------
 -- Vorbis comment
