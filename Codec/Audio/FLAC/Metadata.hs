@@ -451,7 +451,7 @@ instance MetaValue Duration where
 --
 -- <https://xiph.org/flac/id.html>.
 --
--- __Writable__ optional attribute represented as a 'Maybe' 'ByteString'.
+-- __Writable__ optional attribute represented as a @'Maybe' 'ByteString'@.
 
 data Application = Application ByteString
 
@@ -478,7 +478,7 @@ instance MetaValue Application where
 -- (which is enough to trigger auto vacuum feature if no other entries are
 -- detected, see 'flacMetaAutoVacuum').
 --
--- __Writable__ optional attribute represented as a 'Maybe' 'Text'.
+-- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
 
 data VorbisVendor = VorbisVendor
 
@@ -507,7 +507,7 @@ instance MetaValue VorbisVendor where
 -- 'TrackTotal', 'DiscNumber', and 'Rating' are popular de-facto standard
 -- fields. The library also supports the standard ReplayGain comments.
 --
--- __Writable__ optional attribute represented as a 'Maybe' 'Text'.
+-- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
 
 data VorbisComment = VorbisComment VorbisField
 
