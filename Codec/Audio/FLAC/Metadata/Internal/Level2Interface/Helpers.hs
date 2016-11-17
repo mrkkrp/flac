@@ -157,10 +157,10 @@ foreign import ccall unsafe "FLAC__metadata_get_application_data"
 -- | Set application id for given metadata block.
 
 setApplicationId :: Metadata -> ByteString -> IO ()
-setApplicationId block id' =
-  B.useAsCString id'' (c_set_application_id block)
+setApplicationId block appId =
+  B.useAsCString appId' (c_set_application_id block)
   where
-    id'' = B.take 4 (id' <> B.replicate 4 0x00)
+    appId' = B.take 4 (appId <> B.replicate 4 0x00)
 
 foreign import ccall unsafe "FLAC__metadata_set_application_id"
   c_set_application_id :: Metadata -> CString -> IO ()

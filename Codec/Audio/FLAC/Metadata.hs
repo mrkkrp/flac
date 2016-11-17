@@ -120,11 +120,13 @@ import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromJust, fromMaybe, listToMaybe)
+import Data.Maybe (fromJust, listToMaybe)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Foreign hiding (void)
 import Prelude hiding (iterate)
 import System.IO
+import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE
 
@@ -457,14 +459,14 @@ instance MetaValue Application where
   type MetaType Application = Maybe ByteString
   type MetaWritable Application = ()
   retrieve (Application appId) =
-    FlacMeta . withApplicationBlock appId $
+    FlacMeta . withApplicationBlock (fixAppId appId) $
       liftIO . (iteratorGetBlock >=> getApplicationData)
   Application appId =-> Nothing =
-    void . FlacMeta . withApplicationBlock appId $ \i -> do
+    void . FlacMeta . withApplicationBlock (fixAppId appId) $ \i -> do
       liftBool (iteratorDeleteBlock i False)
       setModified
   Application appId =-> Just data' =
-    FlacMeta . withApplicationBlock' appId $ \i -> do
+    FlacMeta . withApplicationBlock' (fixAppId appId) $ \i -> do
       block <- liftIO (iteratorGetBlock i)
       liftIO (setApplicationId block appId)
       liftBool (setApplicationData block data')
@@ -486,10 +488,15 @@ instance MetaValue VorbisVendor where
   retrieve VorbisVendor =
     FlacMeta . withMetaBlock VorbisCommentBlock $
       liftIO . (iteratorGetBlock >=> getVorbisVendor)
-  VorbisVendor =-> mvalue =
+  VorbisVendor =-> Nothing =
+    void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (setVorbisVendor block "")
+      setModified
+  VorbisVendor =-> (Just value) =
     FlacMeta . withMetaBlock' VorbisCommentBlock $ \i -> do
       block <- liftIO (iteratorGetBlock i)
-      liftBool (setVorbisVendor block (fromMaybe "" mvalue))
+      liftBool (setVorbisVendor block value)
       setModified
 
 -- | Various Vorbis comments, see 'VorbisField' for available field names.
@@ -578,15 +585,17 @@ instance MetaValue VorbisComment where
 
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
-  void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i ->
+  void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i -> do
     liftBool (iteratorDeleteBlock i False)
+    setModified
 
 -- | Delete all “Application” metadata blocks.
 
 wipeApplications :: FlacMeta ()
 wipeApplications =
-  void . FlacMeta . withMetaBlock ApplicationBlock $ \i ->
+  void . FlacMeta . withMetaBlock ApplicationBlock $ \i -> do
     liftBool (iteratorDeleteBlock i False)
+    setModified
 
 ----------------------------------------------------------------------------
 -- Debugging and testing
@@ -752,3 +761,8 @@ vorbisFieldName RGTrackGain = "REPLAYGAIN_TRACK_GAIN"
 vorbisFieldName RGAlbumPeak = "REPLAYGAIN_ALBUM_PEAK"
 vorbisFieldName RGAlbumGain = "REPLAYGAIN_ALBUM_GAIN"
 vorbisFieldName field = (B8.pack . fmap toUpper . show) field
+
+-- | Fix application id so it's exactly 4 bytes long.
+
+fixAppId :: ByteString -> ByteString
+fixAppId appId = B.take 4 (appId <> B.replicate 4 0x00)

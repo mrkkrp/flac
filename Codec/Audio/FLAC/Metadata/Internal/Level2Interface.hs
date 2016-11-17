@@ -144,15 +144,15 @@ withIterator chain f = bracket acquire release action
           (FlacMetaException MetaChainStatusMemoryAllocationError)
         Just i -> do
           liftIO (iteratorInit i chain)
-          let go hasMore = do
-                res <- f i
-                let next =
-                      if hasMore
-                        then liftIO (iteratorNext i) >>= go
-                        else return []
-                case res of
-                  Nothing -> next
-                  Just  x -> (x :) <$> next
+          let go thisNext =
+                if thisNext
+                  then do
+                    res <- f i
+                    let next = liftIO (iteratorNext i) >>= go
+                    case res of
+                      Nothing -> next
+                      Just  x -> (x :) <$> next
+                  else return []
           go True
 
 -- | Create a new iterator. Return 'Nothing' if there was a problem with
