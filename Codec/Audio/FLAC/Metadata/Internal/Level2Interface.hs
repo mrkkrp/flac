@@ -224,9 +224,8 @@ foreign import ccall unsafe "FLAC__metadata_iterator_set_block"
 
 iteratorDeleteBlock
   :: MetaIterator      -- ^ Iterator that determines the position
-  -> Bool              -- ^ Whether to replace the block with padding
   -> IO Bool           -- ^ 'False' if something went wrong
-iteratorDeleteBlock = c_iterator_delete_block
+iteratorDeleteBlock block = c_iterator_delete_block block False
 
 foreign import ccall unsafe "FLAC__metadata_iterator_delete_block"
   c_iterator_delete_block :: MetaIterator -> Bool -> IO Bool

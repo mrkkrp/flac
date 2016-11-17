@@ -463,7 +463,7 @@ instance MetaValue Application where
       liftIO . (iteratorGetBlock >=> getApplicationData)
   Application appId =-> Nothing =
     void . FlacMeta . withApplicationBlock (fixAppId appId) $ \i -> do
-      liftBool (iteratorDeleteBlock i False)
+      liftBool (iteratorDeleteBlock i)
       setModified
   Application appId =-> Just data' =
     FlacMeta . withApplicationBlock' (fixAppId appId) $ \i -> do
@@ -586,7 +586,7 @@ instance MetaValue VorbisComment where
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
   void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i -> do
-    liftBool (iteratorDeleteBlock i False)
+    liftBool (iteratorDeleteBlock i)
     setModified
 
 -- | Delete all “Application” metadata blocks.
@@ -594,7 +594,7 @@ wipeVorbisComment =
 wipeApplications :: FlacMeta ()
 wipeApplications =
   void . FlacMeta . withMetaBlock ApplicationBlock $ \i -> do
-    liftBool (iteratorDeleteBlock i False)
+    liftBool (iteratorDeleteBlock i)
     setModified
 
 ----------------------------------------------------------------------------
@@ -716,7 +716,7 @@ applyVacuum = do
     block     <- liftIO (iteratorGetBlock     i)
     empty     <- liftIO (isMetaBlockEmpty blockType block)
     when empty $
-      liftBool (iteratorDeleteBlock i False)
+      liftBool (iteratorDeleteBlock i)
     return Nothing
 
 -- | Determine if given metadata block is empty.
