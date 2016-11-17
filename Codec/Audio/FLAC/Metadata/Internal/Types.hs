@@ -48,7 +48,7 @@ data MetadataType
   | UndefinedType      -- ^ Undefined block
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
--- | Exception that is thrown when manipulation FLAC metadata failed for
+-- | Exception that is thrown when manipulation of FLAC metadata failed for
 -- some reason. The 'MetaChainStatus' may be useful for figuring out what
 -- went wrong.
 

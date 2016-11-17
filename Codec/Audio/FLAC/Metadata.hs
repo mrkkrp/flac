@@ -34,7 +34,6 @@
 -- The next example shows how to set a couple of tags:
 --
 -- > import Codec.Audio.FLAC.Metadata
--- > import Control.Monad.IO.Class (MonadIO (..))
 -- > import Data.Default.Class
 -- >
 -- > main :: IO ()
@@ -179,9 +178,9 @@ data FlacMetaSettings = FlacMetaSettings
     -- entire file. Default value: 'True'.
   , flacMetaPreserveFileStats :: !Bool
     -- ^ If 'True', the owner and modification time will be preserved even
-    -- if new FLAC file is written (this is for cases when we need to write
-    -- entire FLAC file and thus a copy of the file is written). Default
-    -- value: 'True'.
+    -- if new FLAC file is written (this is for the cases when we need to
+    -- write entire FLAC file and thus a copy of the file is written).
+    -- Default value: 'True'.
   } deriving (Show, Read, Eq, Ord)
 
 instance Default FlacMetaSettings where
@@ -445,6 +444,10 @@ instance MetaValue Duration where
 -- constructor (application's ID) should be four bytes long. If it's too
 -- short, null bytes will be appended to it to make it four bytes long. If
 -- it's too long, it will be truncated.
+--
+-- For the list of defined application IDs, see:
+--
+-- <https://xiph.org/flac/id.html>.
 --
 -- __Writable__ optional attribute represented as a 'Maybe' 'ByteString'.
 
