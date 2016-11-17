@@ -100,7 +100,10 @@ module Codec.Audio.FLAC.Metadata
   , VorbisField (..)
     -- * Extra functionality
   , wipeVorbisComment
-  , wipeApplications )
+  , wipeApplications
+    -- * Debugging and testing
+  , MetadataType (..)
+  , allMetadataBlocks )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
@@ -116,6 +119,7 @@ import Data.ByteString (ByteString)
 import Data.Char (toUpper)
 import Data.Default.Class
 import Data.IORef
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Text (Text)
 import Foreign hiding (void)
@@ -585,6 +589,15 @@ wipeVorbisComment =
 
 wipeApplications :: FlacMeta ()
 wipeApplications = undefined -- TODO we need proper traversing primitive
+
+----------------------------------------------------------------------------
+-- Debugging and testing
+
+-- | Return list of all 'MetadataType's of metadata blocks detected in
+-- order.
+
+allMetadataBlocks :: FlacMeta (NonEmpty MetadataType)
+allMetadataBlocks = undefined -- TODO
 
 ----------------------------------------------------------------------------
 -- Helpers
