@@ -494,14 +494,13 @@ instance MetaValue VorbisVendor where
       liftBool (setVorbisVendor block (fromMaybe "" mvalue))
       setModified
 
--- | Various vorbis comments, see 'VorbisField' for available field names.
--- The field names are taken from here:
+-- | Various Vorbis comments, see 'VorbisField' for available field names.
+-- The field names are mostly taken from here:
 --
--- <https://www.xiph.org/vorbis/doc/v-comment.html>
+-- <https://www.xiph.org/vorbis/doc/v-comment.html>.
 --
--- 'TrackTotal' is a popular non-standard field to store total number of
--- tracks in a release. The library also supports standard replay gain
--- comments.
+-- 'TrackTotal', 'DiscNumber', and 'Rating' are popular de-facto standard
+-- fields. The library also supports the standard ReplayGain comments.
 --
 -- __Writable__ optional attribute represented as a 'Maybe' 'Text'.
 
@@ -520,6 +519,7 @@ data VorbisField
                        -- specific larger collection or album.
   | TrackTotal         -- ^ Total number of tracks in the collection this
                        -- track belongs to.
+  | DiscNumber         -- ^ Disc number in a multi-disc release.
   | Artist             -- ^ The artist generally considered responsible for
                        -- the work. In popular music this is usually the
                        -- performing band or singer. For classical music it
@@ -547,7 +547,9 @@ data VorbisField
                        -- distributors of the track. This could be a URL, an
                        -- email address, the physical address of the
                        -- producing label.
-  | ISRC               -- ^ ISRC number for the track.
+  | ISRC               -- ^ ISRC number for the track, see <http://isrc.ifpi.org/en>.
+  | Rating             -- ^ Rating, usually mapped as 1–5 stars with actual
+                       -- values “20”, “40”, “60”, “80”, “100” stored.
   | RGTrackPeak        -- ^ Replay gain track peak, e.g. “0.99996948”.
   | RGTrackGain        -- ^ Replay gain track gain, e.g. “-7.89 dB”.
   | RGAlbumPeak        -- ^ Replay gain album peak, e.g. “0.99996948”.
@@ -572,14 +574,14 @@ instance MetaValue VorbisComment where
 ----------------------------------------------------------------------------
 -- Extra functionality
 
--- | Delete the entire “vorbis comment” metadata block if it exists.
+-- | Delete all “Vorbis comment” metadata blocks.
 
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
   void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i ->
     liftBool (iteratorDeleteBlock i False) -- FIXME
 
--- | Delete all application metadata.
+-- | Delete all “Application” metadata blocks.
 
 wipeApplications :: FlacMeta ()
 wipeApplications = undefined -- TODO we need proper traversing primitive
