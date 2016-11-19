@@ -56,6 +56,12 @@ FLAC__byte *FLAC__metadata_get_application_data(FLAC__StreamMetadata *, unsigned
 void FLAC__metadata_set_application_id(FLAC__StreamMetadata *, FLAC__byte *);
 FLAC__bool FLAC__metadata_set_application_data(FLAC__StreamMetadata *, FLAC__byte *, unsigned);
 
+/* Seek table */
+
+unsigned FLAC__metadata_get_seek_points_num(FLAC__StreamMetadata *);
+FLAC__StreamMetadata_SeekPoint *FLAC__metadata_get_seek_point(FLAC__StreamMetadata *, unsigned);
+void FLAC__metadata_set_seek_point(FLAC__StreamMetadata *, unsigned, FLAC__uint64, FLAC__uint64, unsigned);
+
 /* Vorbis comment */
 
 FLAC__byte *FLAC__metadata_get_vorbis_vendor(FLAC__StreamMetadata *, FLAC__uint32 *);

@@ -14,6 +14,7 @@
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE RecordWildCards          #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   ( -- * Stream info
@@ -43,19 +44,24 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , isVorbisCommentEmpty )
 where
 
+import Codec.Audio.FLAC.Metadata.Internal.Object
 import Codec.Audio.FLAC.Metadata.Internal.Types
+import Control.Monad
+import Control.Monad.Catch
 import Data.ByteString (ByteString)
 import Data.Monoid ((<>))
 import Data.Text (Text)
-import Data.Vector (Vector)
+import Data.Vector (Vector, (!))
 import Data.Word
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import qualified Data.ByteString    as B
-import qualified Data.Text          as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Foreign  as T
+import qualified Data.ByteString     as B
+import qualified Data.Text           as T
+import qualified Data.Text.Encoding  as T
+import qualified Data.Text.Foreign   as T
+import qualified Data.Vector         as V
+import qualified Data.Vector.Mutable as VM
 
 ----------------------------------------------------------------------------
 -- Stream info
@@ -186,12 +192,49 @@ foreign import ccall unsafe "FLAC__metadata_set_application_data"
 -- | Get seek table as a 'Vector' of 'SeekPoint's.
 
 getSeekPoints :: Metadata -> IO (Vector SeekPoint)
-getSeekPoints = undefined -- TODO
+getSeekPoints block = do
+  size <- fromIntegral <$> c_get_seek_points_num block
+  v    <- VM.new size
+  let go n =
+        when (n < size) $ do
+          c_get_seek_point block (fromIntegral n) >>= peek >>= VM.write v n
+          go (n + 1)
+  go 0
+  V.unsafeFreeze v
 
--- | Set seek table represented by a given 'Vector' of 'SeekPoint's.
+foreign import ccall unsafe "FLAC__metadata_get_seek_points_num"
+  c_get_seek_points_num :: Metadata -> IO CUInt
+
+foreign import ccall unsafe "FLAC__metadata_get_seek_point"
+  c_get_seek_point :: Metadata -> CUInt -> IO (Ptr SeekPoint)
+
+-- | Set seek table represented by a given 'Vector' of 'SeekPoint's. Return
+-- 'False' in case of trouble.
 
 setSeekPoints :: Metadata -> Vector SeekPoint -> IO Bool
-setSeekPoints = undefined -- TODO
+setSeekPoints block seekPoints = do
+  let size = fromIntegral (V.length seekPoints)
+  res <- objectSeektableResizePoints block size
+  if res
+    then
+      let go n =
+            if n < size
+              then do
+                let SeekPoint {..} = seekPoints ! fromIntegral n
+                c_set_seek_point block (fromIntegral n)
+                  seekPointSampleNumber
+                  seekPointStreamOffset
+                  seekPointFrameSamples
+                go (n + 1)
+              else do
+                legal <- objectSeektableIsLegal block
+                unless legal $
+                  throwM FlacMetaIncorrectSeekTable
+      in go 0 >> return True
+    else return False
+
+foreign import ccall unsafe "FLAC__metadata_set_seek_point"
+  c_set_seek_point :: Metadata -> CUInt -> Word64 -> Word64 -> Word32 -> IO ()
 
 ----------------------------------------------------------------------------
 -- Vorbis comment

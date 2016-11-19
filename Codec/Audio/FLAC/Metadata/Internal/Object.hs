@@ -15,11 +15,14 @@
 
 module Codec.Audio.FLAC.Metadata.Internal.Object
   ( objectNew
-  , objectDelete )
+  , objectDelete
+  , objectSeektableResizePoints
+  , objectSeektableIsLegal )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
 import Codec.Audio.FLAC.Util
+import Data.Word (Word32)
 import Foreign.C.Types
 
 -- | Create a new metadata object given its type.
@@ -37,3 +40,21 @@ objectDelete = c_object_delete
 
 foreign import ccall unsafe "FLAC__metadata_object_delete"
   c_object_delete :: Metadata -> IO ()
+
+-- | Resize the seekpoint array. In case of trouble return 'False'.
+
+objectSeektableResizePoints :: Metadata -> Word32 -> IO Bool
+objectSeektableResizePoints block newSize =
+  c_object_seektable_resize_points block (fromIntegral newSize)
+
+foreign import ccall unsafe "FLAC__metadata_object_seektable_resize_points"
+  c_object_seektable_resize_points :: Metadata -> CUInt -> IO Bool
+
+-- | Check a seek table to see if it conforms to the FLAC specification.
+-- Return 'False' if the seek table is illegal.
+
+objectSeektableIsLegal :: Metadata -> IO Bool
+objectSeektableIsLegal = c_object_seektable_is_legal
+
+foreign import ccall unsafe "FLAC__metadata_object_seektable_is_legal"
+  c_object_seektable_is_legal :: Metadata -> IO Bool

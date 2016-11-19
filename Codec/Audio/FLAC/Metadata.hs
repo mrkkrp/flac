@@ -103,6 +103,7 @@ module Codec.Audio.FLAC.Metadata
     -- * Extra functionality
   , wipeVorbisComment
   , wipeApplications
+  , wipeSeekTable
     -- * Debugging and testing
   , MetadataType (..)
   , getMetaChain )
@@ -623,6 +624,14 @@ wipeVorbisComment =
 wipeApplications :: FlacMeta ()
 wipeApplications =
   void . FlacMeta . withMetaBlock ApplicationBlock $ \i -> do
+    liftBool (iteratorDeleteBlock i)
+    setModified
+
+-- | Delete all “Seek table” metadata blocks.
+
+wipeSeekTable :: FlacMeta ()
+wipeSeekTable =
+  void . FlacMeta . withMetaBlock SeekTableBlock $ \i -> do
     liftBool (iteratorDeleteBlock i)
     setModified
 

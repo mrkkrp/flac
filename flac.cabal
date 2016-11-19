@@ -67,7 +67,8 @@ library
                     , vector           >= 0.10   && < 0.12
   if !impl(ghc >= 8.0)
     build-depends:    semigroups       == 0.18.*
-
+  if (arch(x86_64))
+    cpp-options:      -DARCH_64_BIT
   extra-libraries:    FLAC
   exposed-modules:    Codec.Audio.FLAC.Metadata
                     , Codec.Audio.FLAC.StreamDecoder
@@ -101,12 +102,13 @@ test-suite tests
                     , Codec.Audio.FLAC.StreamEncoderSpec
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
-  build-depends:      base             >= 4.8 && < 5.0
+  build-depends:      base             >= 4.8    && < 5.0
                     , cryptonite
                     , data-default-class
                     , flac             >= 0.1.0
-                    , hspec            >= 2.0 && < 3.0
-                    , transformers     >= 0.4 && < 0.6
+                    , hspec            >= 2.0    && < 3.0
+                    , transformers     >= 0.4    && < 0.6
+                    , vector           >= 0.10   && < 0.12
   if flag(dev)
     ghc-options:      -Wall -Werror
   else

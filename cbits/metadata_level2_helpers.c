@@ -108,6 +108,33 @@ FLAC__bool FLAC__metadata_set_application_data
   return FLAC__metadata_object_application_set_data(block, data, length, true);
 }
 
+/* Seek table */
+
+unsigned FLAC__metadata_get_seek_points_num(FLAC__StreamMetadata *block)
+{
+  return block->data.seek_table.num_points;
+}
+
+FLAC__StreamMetadata_SeekPoint *FLAC__metadata_get_seek_point
+  (FLAC__StreamMetadata *block, unsigned point_num)
+{
+  return block->data.seek_table.points + point_num;
+}
+
+void FLAC__metadata_set_seek_point
+  ( FLAC__StreamMetadata *block
+  , unsigned point_num
+  , FLAC__uint64 sample_number
+  , FLAC__uint64 stream_offset
+  , unsigned frame_samples )
+{
+  FLAC__StreamMetadata_SeekPoint sp;
+  sp.sample_number = sample_number;
+  sp.stream_offset = stream_offset;
+  sp.frame_samples = frame_samples;
+  FLAC__metadata_object_seektable_set_point(block, point_num, sp);
+}
+
 /* Vorbis comment */
 
 FLAC__byte *FLAC__metadata_get_vorbis_vendor
