@@ -52,7 +52,7 @@ withChain :: (MetaChain -> IO a) -> IO a
 withChain f = bracket chainNew (mapM_ chainDelete) $ \mchain ->
   case mchain of
     Nothing -> throwM
-      (FlacMetaException MetaChainStatusMemoryAllocationError)
+      (FlacMetaGeneralProblem MetaChainStatusMemoryAllocationError)
     Just x -> f x
 
 -- | Create a new 'MetaChain'. In the case of memory allocation problem
@@ -141,7 +141,7 @@ withIterator chain f = bracket acquire release action
     action mi =
       case mi of
         Nothing -> throwM
-          (FlacMetaException MetaChainStatusMemoryAllocationError)
+          (FlacMetaGeneralProblem MetaChainStatusMemoryAllocationError)
         Just i -> do
           liftIO (iteratorInit i chain)
           let go thisNext =

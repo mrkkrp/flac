@@ -43,7 +43,7 @@
 -- >   VorbisComment Date   =-> Nothing
 --
 -- Here we write two tags using the @('=->')@ operator and delete the
--- 'VorbisComment' 'Date' metadata attribute by setting it to 'Nothing'.
+-- @'VorbisComment' 'Date'@ metadata attribute by setting it to 'Nothing'.
 -- Note that not all attributes are writable, so we cannot set things like
 -- 'SampleRate'. In fact, the type system mechanics used in the library
 -- prevent this.
@@ -95,6 +95,8 @@ module Codec.Audio.FLAC.Metadata
   , MD5Sum (..)
   , Duration (..)
   , Application (..)
+  , SeekTable (..)
+  , SeekPoint (..)
   , VorbisVendor (..)
   , VorbisComment (..)
   , VorbisField (..)
@@ -123,6 +125,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.Vector (Vector)
 import Foreign hiding (void)
 import Prelude hiding (iterate)
 import System.IO
@@ -472,6 +475,32 @@ instance MetaValue Application where
       liftBool (setApplicationData block data')
       setModified
 
+-- | Seek table as a 'Vector' of 'SeekPoint's. Seek points within a table
+-- must be sorted in ascending order by sample number. If you try to write
+-- an incorrect seek table, 'FlacMetaException' will be raised with
+-- 'FlacMetaIncorrectSeekTable' constructor.
+--
+-- __Writable__ optional attribute represented as a @'Maybe' ('Vector'
+-- 'SeekPoint')@.
+
+data SeekTable = SeekTable
+
+instance MetaValue SeekTable where
+  type MetaType SeekTable = Maybe (Vector SeekPoint)
+  type MetaWritable SeekTable = ()
+  retrieve SeekTable =
+    FlacMeta . withMetaBlock SeekTableBlock $
+      liftIO . (iteratorGetBlock >=> getSeekPoints)
+  SeekTable =-> Nothing =
+    void . FlacMeta . withMetaBlock SeekTableBlock $ \i -> do
+      liftBool (iteratorDeleteBlock i)
+      setModified
+  SeekTable =-> Just seekPoints =
+    FlacMeta . withMetaBlock' SeekTableBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (setSeekPoints block seekPoints)
+      setModified
+
 -- | Vorbis “vendor” comment. When “Vorbis Comment” metadata block is
 -- present, the “vendor” entry is always in there, so when you delete it (by
 -- @'VorbisVendor' '=->' 'Nothing'@), you really set it to an empty string
@@ -744,7 +773,7 @@ throwStatus :: Inner a
 throwStatus = do
   chain  <- asks metaChain
   status <- liftIO (chainStatus chain)
-  throwM (FlacMetaException status)
+  throwM (FlacMetaGeneralProblem status)
 
 -- | Specify that the metadata chain has been modified.
 

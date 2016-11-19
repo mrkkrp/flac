@@ -31,6 +31,9 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , getApplicationData
   , setApplicationId
   , setApplicationData
+    -- * Seek table
+  , getSeekPoints
+  , setSeekPoints
     -- * Vorbis comment
   , getVorbisVendor
   , setVorbisVendor
@@ -44,6 +47,7 @@ import Codec.Audio.FLAC.Metadata.Internal.Types
 import Data.ByteString (ByteString)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.Vector (Vector)
 import Data.Word
 import Foreign
 import Foreign.C.String
@@ -175,6 +179,19 @@ setApplicationData block data' =
 
 foreign import ccall unsafe "FLAC__metadata_set_application_data"
   c_set_application_data :: Metadata -> CString -> CUInt -> IO Bool
+
+----------------------------------------------------------------------------
+-- Seek table
+
+-- | Get seek table as a 'Vector' of 'SeekPoint's.
+
+getSeekPoints :: Metadata -> IO (Vector SeekPoint)
+getSeekPoints = undefined -- TODO
+
+-- | Set seek table represented by a given 'Vector' of 'SeekPoint's.
+
+setSeekPoints :: Metadata -> Vector SeekPoint -> IO Bool
+setSeekPoints = undefined -- TODO
 
 ----------------------------------------------------------------------------
 -- Vorbis comment

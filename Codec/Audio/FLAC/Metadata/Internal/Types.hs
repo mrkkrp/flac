@@ -15,7 +15,8 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , Metadata (..)
   , MetadataType (..)
   , FlacMetaException (..)
-  , MetaChainStatus (..) )
+  , MetaChainStatus (..)
+  , SeekPoint (..) )
 where
 
 import Control.Exception (Exception)
@@ -41,7 +42,7 @@ data MetadataType
   = StreamInfoBlock    -- ^ Stream info block (general data like sample rate)
   | PaddingBlock       -- ^ Padding block
   | ApplicationBlock   -- ^ Application block
-  | SeektableBlock     -- ^ Seektable block
+  | SeekTableBlock     -- ^ Seek table block
   | VorbisCommentBlock -- ^ Vorbis comment block, a.k.a. FLAC tags
   | CueSheetType       -- ^ Cue sheet block
   | PictureType        -- ^ Picture block
@@ -49,10 +50,13 @@ data MetadataType
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 -- | Exception that is thrown when manipulation of FLAC metadata failed for
--- some reason. The 'MetaChainStatus' may be useful for figuring out what
--- went wrong.
+-- some reason.
 
-data FlacMetaException = FlacMetaException MetaChainStatus
+data FlacMetaException
+  = FlacMetaGeneralProblem MetaChainStatus
+    -- ^ General failure, see the attached 'MetaChainStatus'
+  | FlacMetaIncorrectSeekTable
+    -- ^ Incorrect seek table was passed to be written
   deriving (Eq, Show, Read)
 
 instance Exception FlacMetaException
@@ -98,3 +102,15 @@ data MetaChainStatus
   | MetaChainStatusWrongWriteCall
     -- ^ Should not ever happen when you use this binding.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | The datatype represents a single point in a seek table metadata block.
+
+data SeekPoint = SeekPoint
+  { seekPointSampleNumber :: !Word64
+    -- ^ The sample number of the target frame
+  , seekPointStreamOffset :: !Word64
+    -- ^ The offset in bytes of the target frame with respect to beginning
+    -- of the first frame
+  , seekPointFrameSamples :: !Word32
+    -- ^ The number of samples in the target frame
+  } deriving (Eq, Ord, Show, Read)
