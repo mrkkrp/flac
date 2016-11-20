@@ -149,7 +149,13 @@ import GHC.Exts (Constraint)
 -- 'runFlacMeta'.
 
 newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
-  deriving (Functor, Applicative, Monad, MonadIO)
+  deriving ( Functor
+           , Applicative
+           , Monad
+           , MonadIO
+           , MonadThrow
+           , MonadCatch
+           , MonadMask )
 
 -- | Non-public shortcut for inner monad stack of 'FlacMeta'.
 
