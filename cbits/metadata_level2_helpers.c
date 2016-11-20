@@ -200,3 +200,78 @@ FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *block)
   return (block->data.vorbis_comment.vendor_string.length == 0) &&
     (block->data.vorbis_comment.num_comments == 0);
 }
+
+/* Picture */
+
+FLAC__StreamMetadata_Picture_Type FLAC__metadata_get_picture_type
+  (FLAC__StreamMetadata *block)
+{
+  return block->data.picture.type;
+}
+
+char *FLAC__metadata_get_picture_mime_type(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.mime_type;
+}
+
+FLAC__byte *FLAC__metadata_get_picture_description(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.description;
+}
+
+FLAC__uint32 FLAC__metadata_get_picture_width(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.width;
+}
+
+FLAC__uint32 FLAC__metadata_get_picture_height(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.height;
+}
+
+FLAC__uint32 FLAC__metadata_get_picture_depth(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.depth;
+}
+
+FLAC__uint32 FLAC__metadata_get_picture_colors(FLAC__StreamMetadata *block)
+{
+  return block->data.picture.colors;
+}
+
+FLAC__byte *FLAC__metadata_get_picture_data
+  (FLAC__StreamMetadata *block, FLAC__uint32 *length)
+{
+  *length = block->data.picture.data_length;
+  return block->data.picture.data;
+}
+
+void FLAC__metadata_set_picture_type
+  (FLAC__StreamMetadata *block, FLAC__StreamMetadata_Picture_Type picture_type)
+{
+  block->data.picture.type = picture_type;
+}
+
+void FLAC__metadata_set_picture_width
+  (FLAC__StreamMetadata *block, FLAC__uint32 width)
+{
+  block->data.picture.width = width;
+}
+
+void FLAC__metadata_set_picture_height
+  (FLAC__StreamMetadata *block, FLAC__uint32 height)
+{
+  block->data.picture.height = height;
+}
+
+void FLAC__metadata_set_picture_depth
+  (FLAC__StreamMetadata *block, FLAC__uint32 depth)
+{
+  block->data.picture.depth = depth;
+}
+
+void FLAC__metadata_set_picture_colors
+  (FLAC__StreamMetadata *block, FLAC__uint32 colors)
+{
+  block->data.picture.colors = colors;
+}

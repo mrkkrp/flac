@@ -19,10 +19,14 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , MetadataType (..)
   , FlacMetaException (..)
   , MetaChainStatus (..)
-  , SeekPoint (..) )
+  , SeekPoint (..)
+  , PictureType (..)
+  , PictureData (..) )
 where
 
 import Control.Exception (Exception)
+import Data.ByteString (ByteString)
+import Data.Text (Text)
 import Data.Void
 import Foreign
 
@@ -47,9 +51,9 @@ data MetadataType
   | ApplicationBlock   -- ^ Application block
   | SeekTableBlock     -- ^ Seek table block
   | VorbisCommentBlock -- ^ Vorbis comment block, a.k.a. FLAC tags
-  | CueSheetType       -- ^ Cue sheet block
-  | PictureType        -- ^ Picture block
-  | UndefinedType      -- ^ Undefined block
+  | CueSheetBlock      -- ^ Cue sheet block
+  | PictureBlock       -- ^ Picture block
+  | UndefinedBlock     -- ^ Undefined block
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 -- | Exception that is thrown when manipulation of FLAC metadata failed for
@@ -119,18 +123,13 @@ data SeekPoint = SeekPoint
   } deriving (Eq, Ord, Show, Read)
 
 instance Storable SeekPoint where
-  -- NOTE The values are correct on some machines, but they are here just to
-  -- remove the warning, we don't use them in this binding, as it's not
-  -- reliable and on machines with different architectures they may be
+  -- NOTE The values are correct for my x86_64 machine, but they are here
+  -- just to remove the warning, we don't use them in this binding, as it's
+  -- not reliable and on machines with different architectures they may be
   -- simply incorrect. So to read an array of values, we use a helper that
   -- returns pointer to Nth element of array and recreate it this way.
-#ifdef ARCH_64_BIT
   sizeOf    _ = 24
   alignment _ = 8
-#else
-  sizeOf    _ = 20
-  alignment _ = 4
-#endif
   peek ptr = do
     seekPointSampleNumber <- peekByteOff ptr 0
     seekPointStreamOffset <- peekByteOff ptr 8
@@ -140,3 +139,46 @@ instance Storable SeekPoint where
     pokeByteOff ptr  0 seekPointSampleNumber
     pokeByteOff ptr  8 seekPointStreamOffset
     pokeByteOff ptr 16 seekPointFrameSamples
+
+-- | Type of picture FLAC metadata can contain. There may be several
+-- metadata blocks containing pictures of different “types”.
+
+data PictureType
+  = PictureOther             -- ^ Other
+  | PictureFileIconStandard  -- ^ 32×32 pixels file icon (PNG only)
+  | PictureFileIcon          -- ^ Other file icon
+  | PictureFrontCover        -- ^ Cover (front)
+  | PictureBackCover         -- ^ Cover (back)
+  | PictureLeafletPage       -- ^ Leaflet page
+  | PictureMedia             -- ^ Media (e.g. label side of CD)
+  | PictureLeadArtist        -- ^ Lead artist\/lead performer\/soloist
+  | PictureArtist            -- ^ Artist\/performer
+  | PictureConductor         -- ^ Conductor
+  | PictureBand              -- ^ Band\/orchestra
+  | PictureComposer          -- ^ Composer
+  | PictureLyricist          -- ^ Lyricist\/text writer
+  | PictureRecordingLocation -- ^ Recording location
+  | PictureDuringRecording   -- ^ During recording
+  | PictureDuringPerformance -- ^ During performance
+  | PictureVideoScreenCapture -- ^ Movie\/video screen capture
+  | PictureFish              -- ^ A bright coloured fish
+  | PictureIllustration      -- ^ Illustration
+  | PictureBandLogotype      -- ^ Band\/artist logotype
+  | PicturePublisherLogotype -- ^ Publisher\/studio logotype
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | Representation of picture contained in a FLAC metadata block.
+
+data PictureData = PictureData
+  { pictureMimeType    :: Text
+    -- ^ The picture's MIME data. For best compatibility with players, use
+    -- picture data of MIME type @image\/jpeg@ or @image\/png@.
+  , pictureDescription :: Text   -- ^ Picture's description.
+  , pictureWidth       :: Word32 -- ^ Picture's width in pixels.
+  , pictureHeight      :: Word32 -- ^ Picture's height in pixels.
+  , pictureDepth       :: Word32 -- ^ Picture's color depth in bits-per-pixel.
+  , pictureColors      :: Word32
+    -- ^ For indexed palettes (like GIF), picture's number of colors (the
+    -- number of palette entries), or 0 for non-indexed (i.e. 2 ^ depth).
+  , pictureData        :: ByteString -- ^ Binary picture data.
+  } deriving (Eq, Ord, Show, Read)

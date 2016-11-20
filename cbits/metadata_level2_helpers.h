@@ -71,4 +71,21 @@ FLAC__bool FLAC__metadata_set_vorbis_comment(FLAC__StreamMetadata *, FLAC__byte 
 FLAC__bool FLAC__metadata_delete_vorbis_comment(FLAC__StreamMetadata *, const char *);
 FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *);
 
+/* Picture */
+
+FLAC__StreamMetadata_Picture_Type FLAC__metadata_get_picture_type(FLAC__StreamMetadata *);
+char *FLAC__metadata_get_picture_mime_type(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_picture_description(FLAC__StreamMetadata *);
+FLAC__uint32 FLAC__metadata_get_picture_width(FLAC__StreamMetadata *);
+FLAC__uint32 FLAC__metadata_get_picture_height(FLAC__StreamMetadata *);
+FLAC__uint32 FLAC__metadata_get_picture_depth(FLAC__StreamMetadata *);
+FLAC__uint32 FLAC__metadata_get_picture_colors(FLAC__StreamMetadata *);
+FLAC__byte *FLAC__metadata_get_picture_data(FLAC__StreamMetadata *, FLAC__uint32 *);
+
+void FLAC__metadata_set_picture_type(FLAC__StreamMetadata *, FLAC__StreamMetadata_Picture_Type);
+void FLAC__metadata_set_picture_width(FLAC__StreamMetadata *, FLAC__uint32);
+void FLAC__metadata_set_picture_height(FLAC__StreamMetadata *, FLAC__uint32);
+void FLAC__metadata_set_picture_depth(FLAC__StreamMetadata *, FLAC__uint32);
+void FLAC__metadata_set_picture_colors(FLAC__StreamMetadata *, FLAC__uint32);
+
 #endif /* FLAC__METADATA_LEVEL2_HELPERS_H */

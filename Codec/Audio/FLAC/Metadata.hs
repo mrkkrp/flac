@@ -100,10 +100,14 @@ module Codec.Audio.FLAC.Metadata
   , VorbisVendor (..)
   , VorbisComment (..)
   , VorbisField (..)
+  , Picture (..)
+  , PictureType (..)
+  , PictureData (..)
     -- * Extra functionality
   , wipeVorbisComment
   , wipeApplications
   , wipeSeekTable
+  , wipePictures
     -- * Debugging and testing
   , MetadataType (..)
   , getMetaChain )
@@ -478,7 +482,6 @@ instance MetaValue Application where
   Application appId =-> Just data' =
     FlacMeta . withApplicationBlock' (fixAppId appId) $ \i -> do
       block <- liftIO (iteratorGetBlock i)
-      liftIO (setApplicationId block appId)
       liftBool (setApplicationData block data')
       setModified
 
@@ -614,6 +617,30 @@ instance MetaValue VorbisComment where
       liftBool (setVorbisComment (vorbisFieldName field) value block)
       setModified
 
+-- | Picture embedded in FLAC file. A FLAC file can have several pictures
+-- attached to it, you choose which one you want by specifying
+-- 'PictureType'.
+--
+-- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
+
+data Picture = Picture PictureType
+
+instance MetaValue Picture where
+  type MetaType Picture = Maybe PictureData
+  type MetaWritable Picture = ()
+  retrieve (Picture pictureType) =
+    FlacMeta . withPictureBlock pictureType $
+      liftIO . (iteratorGetBlock >=> getPictureData)
+  Picture pictureType =-> Nothing =
+    void . FlacMeta . withPictureBlock pictureType $ \i -> do
+      liftBool (iteratorDeleteBlock i)
+      setModified
+  Picture pictureType =-> Just pictureData =
+    void . FlacMeta . withPictureBlock' pictureType $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (setPictureData block pictureData)
+      setModified
+
 ----------------------------------------------------------------------------
 -- Extra functionality
 
@@ -638,6 +665,14 @@ wipeApplications =
 wipeSeekTable :: FlacMeta ()
 wipeSeekTable =
   void . FlacMeta . withMetaBlock SeekTableBlock $ \i -> do
+    liftBool (iteratorDeleteBlock i)
+    setModified
+
+-- | Delete all “Picture” metadata blocks.
+
+wipePictures :: FlacMeta ()
+wipePictures =
+  void . FlacMeta . withMetaBlock PictureBlock $ \i -> do
     liftBool (iteratorDeleteBlock i)
     setModified
 
@@ -707,7 +742,7 @@ withMetaBlock' blockType f = do
     Just x -> return x
 
 -- | The same as 'withMetaBlock' but it searches for a block of type
--- 'ApplicationBlock' having specified application id.
+-- 'ApplicationBlock' that has specified application id.
 
 withApplicationBlock
   :: ByteString        -- ^ Application id to find
@@ -726,7 +761,7 @@ withApplicationBlock givenId f = do
           else return Nothing
       else return Nothing
 
--- | Just like 'applicationBlock', but creates a new application block with
+-- | Just like 'applicationBlock', but creates a new 'ApplicationBlock' with
 -- given id if no such block can be found.
 
 withApplicationBlock'
@@ -745,6 +780,50 @@ withApplicationBlock' givenId f = do
               release = liftIO . objectDelete
           in bracketOnError acquire release $ \block -> do
                liftIO (setApplicationId block givenId)
+               liftBool (iteratorInsertBlockAfter i block)
+               Just <$> f i
+        else return Nothing
+    Just x -> return x
+
+-- | The same as 'withMetaBlock', but it searches for a block of type
+-- 'PictureBlock' that has specific 'PictureType'.
+
+withPictureBlock
+  :: PictureType       -- ^ Picture type to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withPictureBlock givenType f = do
+  chain <- asks metaChain
+  fmap listToMaybe . withIterator chain $ \i -> do
+    actual <- liftIO (iteratorGetBlockType i)
+    if actual == PictureBlock
+      then do
+        block      <- liftIO (iteratorGetBlock i)
+        actualType <- liftIO (getPictureType block)
+        if actualType == givenType
+          then Just <$> f i
+          else return Nothing
+      else return Nothing
+
+-- | Just like 'withPictureBlock', but creates a new 'PictureBlock' with
+-- given 'PictureType' if no such block can be found.
+
+withPictureBlock'
+  :: PictureType       -- ^ Picture type to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner a           -- ^ Result in 'Just'
+withPictureBlock' givenType f = do
+  chain <- asks metaChain
+  res   <- withPictureBlock givenType f
+  case res of
+    Nothing -> fmap head . withIterator chain $ \i -> do
+      actual <- liftIO (iteratorGetBlockType i)
+      if actual == StreamInfoBlock
+        then
+          let acquire = liftMaybe (objectNew PictureBlock)
+              release = liftIO . objectDelete
+          in bracketOnError acquire release $ \block -> do
+               liftIO (setPictureType block givenType)
                liftBool (iteratorInsertBlockAfter i block)
                Just <$> f i
         else return Nothing

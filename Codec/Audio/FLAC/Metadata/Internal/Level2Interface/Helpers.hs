@@ -41,13 +41,20 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , getVorbisComment
   , setVorbisComment
   , deleteVorbisComment
-  , isVorbisCommentEmpty )
+  , isVorbisCommentEmpty
+    -- * Picture
+  , getPictureType
+  , getPictureData
+  , setPictureType
+  , setPictureData )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Object
 import Codec.Audio.FLAC.Metadata.Internal.Types
+import Codec.Audio.FLAC.Util
 import Control.Monad
 import Control.Monad.Catch
+import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Monoid ((<>))
 import Data.Text (Text)
@@ -245,7 +252,7 @@ getVorbisVendor :: Metadata -> IO Text
 getVorbisVendor block = alloca $ \sizePtr -> do
   vendorPtr <- c_get_vorbis_vendor block sizePtr
   size      <- fromIntegral <$> peek sizePtr
-  T.decodeUtf8 <$> B.packCStringLen (vendorPtr, size)
+  T.peekCStringLen (vendorPtr, size)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_vendor"
   c_get_vorbis_vendor :: Metadata -> Ptr Word32 -> IO CString
@@ -305,3 +312,95 @@ isVorbisCommentEmpty = c_is_vorbis_comment_empty
 
 foreign import ccall unsafe "FLAC__metadata_is_vorbis_comment_empty"
   c_is_vorbis_comment_empty :: Metadata -> IO Bool
+
+----------------------------------------------------------------------------
+-- Picture
+
+-- | Get type of picture assuming that given 'Metadata' block is a
+-- 'PictureBolck'.
+
+getPictureType :: Metadata -> IO PictureType
+getPictureType = fmap toEnum' . c_get_picture_type
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_type"
+  c_get_picture_type :: Metadata -> IO CUInt
+
+-- | Get picture data from given 'Metadata' block.
+
+getPictureData :: Metadata -> IO PictureData
+getPictureData block = do
+  pictureMimeType    <- c_get_picture_mime_type   block >>= peekCStringText
+  pictureDescription <- c_get_picture_description block >>= peekCStringText
+  pictureWidth       <- c_get_picture_width       block
+  pictureHeight      <- c_get_picture_height      block
+  pictureDepth       <- c_get_picture_depth       block
+  pictureColors      <- c_get_picture_colors      block
+  pictureData        <- alloca $ \dataSizePtr -> do
+    dataPtr  <- c_get_picture_data block dataSizePtr
+    dataSize <- fromIntegral <$> peek dataSizePtr
+    B.packCStringLen (dataPtr, dataSize)
+  return PictureData {..}
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_mime_type"
+  c_get_picture_mime_type :: Metadata -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_description"
+  c_get_picture_description :: Metadata -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_width"
+  c_get_picture_width :: Metadata -> IO Word32
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_height"
+  c_get_picture_height :: Metadata -> IO Word32
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_depth"
+  c_get_picture_depth :: Metadata -> IO Word32
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_colors"
+  c_get_picture_colors :: Metadata -> IO Word32
+
+foreign import ccall unsafe "FLAC__metadata_get_picture_data"
+  c_get_picture_data :: Metadata -> Ptr Word32 -> IO CString
+
+-- | Set 'PictureType' to given 'Metadata' block that should be a
+-- 'PictureBlock'.
+
+setPictureType :: Metadata -> PictureType -> IO ()
+setPictureType block pictureType =
+  c_set_picture_type block (fromEnum' pictureType)
+
+foreign import ccall unsafe "FLAC__metadata_set_picture_type"
+  c_set_picture_type :: Metadata -> CUInt -> IO ()
+
+-- | Set 'PictureData' in given 'Metadata' block of type 'PictureBlock'.
+
+setPictureData :: Metadata -> PictureData -> IO Bool
+setPictureData block PictureData {..} = do
+  c_set_picture_width  block pictureWidth
+  c_set_picture_height block pictureHeight
+  c_set_picture_depth  block pictureDepth
+  c_set_picture_colors block pictureColors
+  shortcutFalse
+    [ objectPictureSetMimeType    block pictureMimeType
+    , objectPictureSetDescription block pictureDescription
+    , objectPictureSetData        block pictureData ]
+
+foreign import ccall unsafe "FLAC__metadata_set_picture_width"
+  c_set_picture_width :: Metadata -> Word32 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_picture_height"
+  c_set_picture_height :: Metadata -> Word32 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_picture_depth"
+  c_set_picture_depth :: Metadata -> Word32 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_picture_colors"
+  c_set_picture_colors :: Metadata -> Word32 -> IO ()
+
+-- | Execute a collection of actions that return 'False' on failure. As soon
+-- as failure is reported, stop the execution and return 'False'. Return
+-- 'True' in case of success.
+
+shortcutFalse :: [IO Bool] -> IO Bool
+shortcutFalse []     = return True
+shortcutFalse (m:ms) = m >>= bool (return False) (shortcutFalse ms)
