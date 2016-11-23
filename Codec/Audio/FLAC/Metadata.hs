@@ -110,7 +110,8 @@ module Codec.Audio.FLAC.Metadata
   , wipePictures
     -- * Debugging and testing
   , MetadataType (..)
-  , getMetaChain )
+  , getMetaChain
+  , isMetaChainModified )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
@@ -687,6 +688,13 @@ getMetaChain :: FlacMeta (NonEmpty MetadataType)
 getMetaChain = FlacMeta $ do
   chain <- asks metaChain
   NE.fromList <$> withIterator chain (fmap Just . liftIO . iteratorGetBlockType)
+
+-- | Returns 'True' if actions in current 'FlacMeta' context have modified
+-- FLAC metadata. If so, the FLAC file will be updated to reflect these
+-- changes on the way out from the 'FlacMeta' monad.
+
+isMetaChainModified :: FlacMeta Bool
+isMetaChainModified = FlacMeta (asks metaModified >>= liftIO . readIORef)
 
 ----------------------------------------------------------------------------
 -- Helpers
