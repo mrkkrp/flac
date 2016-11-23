@@ -137,6 +137,7 @@ import System.IO
 import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE
+import qualified Data.Vector           as V
 
 #if MIN_VERSION_base(4,9,0)
 import Data.Kind (Constraint)
@@ -845,6 +846,8 @@ applyVacuum = do
 -- | Determine if given metadata block is empty.
 
 isMetaBlockEmpty :: MonadIO m => MetadataType -> Metadata -> m Bool
+isMetaBlockEmpty SeekTableBlock block =
+  V.null <$> liftIO (getSeekPoints block)
 isMetaBlockEmpty VorbisCommentBlock block =
   liftIO (isVorbisCommentEmpty block)
 isMetaBlockEmpty _ _ = return False
