@@ -711,13 +711,9 @@ withMetaBlock
   :: MetadataType      -- ^ Type of block to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
-withMetaBlock given f = do
-  chain <- asks metaChain
-  fmap listToMaybe . withIterator chain $ \i -> do
-    actual <- liftIO (iteratorGetBlockType i)
-    if actual == given
-      then Just <$> f i
-      else return Nothing
+withMetaBlock = withMetaBlockGen noCheck
+  where
+    noCheck _ = return True
 
 -- | Just like 'withMetaBlock', but creates a new block of requested type if
 -- no block of such type can be found.
@@ -726,21 +722,10 @@ withMetaBlock'
   :: MetadataType      -- ^ Type of block to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner a           -- ^ Result
-withMetaBlock' blockType f = do
-  chain <- asks metaChain
-  res   <- withMetaBlock blockType f
-  case res of
-    Nothing -> fmap head . withIterator chain $ \i -> do
-      actual <- liftIO (iteratorGetBlockType i)
-      if actual == StreamInfoBlock
-        then
-          let acquire = liftMaybe (objectNew blockType)
-              release = liftIO . objectDelete
-          in bracketOnError acquire release $ \block -> do
-               liftBool (iteratorInsertBlockAfter i block)
-               Just <$> f i
-        else return Nothing
-    Just x -> return x
+withMetaBlock' = withMetaBlockGen' noCheck noSet
+  where
+    noCheck _ = return True
+    noSet   _ = return ()
 
 -- | The same as 'withMetaBlock' but it searches for a block of type
 -- 'ApplicationBlock' that has specified application id.
@@ -749,18 +734,10 @@ withApplicationBlock
   :: ByteString        -- ^ Application id to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
-withApplicationBlock givenId f = do
-  chain <- asks metaChain
-  fmap listToMaybe . withIterator chain $ \i -> do
-    actual <- liftIO (iteratorGetBlockType i)
-    if actual == ApplicationBlock
-      then do
-        block    <- liftIO (iteratorGetBlock i)
-        actualId <- liftIO (getApplicationId block)
-        if actualId == givenId
-          then Just <$> f i
-          else return Nothing
-      else return Nothing
+withApplicationBlock givenId =
+  withMetaBlockGen idCheck ApplicationBlock
+  where
+    idCheck = fmap (== givenId) . liftIO . getApplicationId
 
 -- | Just like 'applicationBlock', but creates a new 'ApplicationBlock' with
 -- given id if no such block can be found.
@@ -769,22 +746,11 @@ withApplicationBlock'
   :: ByteString        -- ^ Application id to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner a           -- ^ Result
-withApplicationBlock' givenId f = do
-  chain <- asks metaChain
-  res   <- withApplicationBlock givenId f
-  case res of
-    Nothing -> fmap head . withIterator chain $ \i -> do
-      actual <- liftIO (iteratorGetBlockType i)
-      if actual == StreamInfoBlock
-        then
-          let acquire = liftMaybe (objectNew ApplicationBlock)
-              release = liftIO . objectDelete
-          in bracketOnError acquire release $ \block -> do
-               liftIO (setApplicationId block givenId)
-               liftBool (iteratorInsertBlockAfter i block)
-               Just <$> f i
-        else return Nothing
-    Just x -> return x
+withApplicationBlock' givenId =
+  withMetaBlockGen' idCheck setId ApplicationBlock
+  where
+    idCheck     = fmap (== givenId) . liftIO . getApplicationId
+    setId block = liftIO (setApplicationId block givenId)
 
 -- | The same as 'withMetaBlock', but it searches for a block of type
 -- 'PictureBlock' that has specific 'PictureType'.
@@ -793,18 +759,9 @@ withPictureBlock
   :: PictureType       -- ^ Picture type to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
-withPictureBlock givenType f = do
-  chain <- asks metaChain
-  fmap listToMaybe . withIterator chain $ \i -> do
-    actual <- liftIO (iteratorGetBlockType i)
-    if actual == PictureBlock
-      then do
-        block      <- liftIO (iteratorGetBlock i)
-        actualType <- liftIO (getPictureType block)
-        if actualType == givenType
-          then Just <$> f i
-          else return Nothing
-      else return Nothing
+withPictureBlock givenType = withMetaBlockGen typeCheck PictureBlock
+  where
+    typeCheck = fmap (== givenType) . liftIO . getPictureType
 
 -- | Just like 'withPictureBlock', but creates a new 'PictureBlock' with
 -- given 'PictureType' if no such block can be found.
@@ -813,18 +770,56 @@ withPictureBlock'
   :: PictureType       -- ^ Picture type to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner a           -- ^ Result in 'Just'
-withPictureBlock' givenType f = do
+withPictureBlock' givenType =
+  withMetaBlockGen' typeCheck setType PictureBlock
+  where
+    typeCheck = fmap (== givenType) . liftIO . getPictureType
+    setType block = liftIO (setPictureType block givenType)
+
+-- | A generic building block for 'withMetaBlock'-like helpers.
+
+withMetaBlockGen
+  :: (Metadata -> Inner Bool) -- ^ Additional check on 'Metadata' block
+  -> MetadataType      -- ^ Type of block to find
+  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
+  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withMetaBlockGen check givenType f = do
   chain <- asks metaChain
-  res   <- withPictureBlock givenType f
+  fmap listToMaybe . withIterator chain $ \i -> do
+    actualType <- liftIO (iteratorGetBlockType i)
+    if actualType == givenType
+      then do
+        block <- liftIO (iteratorGetBlock i)
+        match <- check block
+        if match
+          then Just <$> f i
+          else return Nothing
+      else return Nothing
+
+-- | A generic building block for 'withMetaBlock''-like helpers.
+
+withMetaBlockGen'
+  :: (Metadata -> Inner Bool)
+     -- ^ Additional check on 'Metadata' block
+  -> (Metadata -> Inner ())
+     -- ^ Set parameters of newly created block before calling the main callback
+  -> MetadataType
+     -- ^ Type of block to find
+  -> (MetaIterator -> Inner a)
+     -- ^ What to do if such block found (main callback)
+  -> Inner a
+withMetaBlockGen' check setParam givenType f = do
+  chain <- asks metaChain
+  res   <- withMetaBlockGen check givenType f
   case res of
     Nothing -> fmap head . withIterator chain $ \i -> do
       actual <- liftIO (iteratorGetBlockType i)
       if actual == StreamInfoBlock
         then
-          let acquire = liftMaybe (objectNew PictureBlock)
+          let acquire = liftMaybe (objectNew givenType)
               release = liftIO . objectDelete
           in bracketOnError acquire release $ \block -> do
-               liftIO (setPictureType block givenType)
+               setParam block
                liftBool (iteratorInsertBlockAfter i block)
                Just <$> f i
         else return Nothing
