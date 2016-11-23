@@ -152,10 +152,10 @@ foreign import ccall unsafe "FLAC__metadata_get_md5sum"
 
 -- | Get application id from given 'Metadata' block.
 
-getApplicationId :: Metadata -> IO ByteString
+getApplicationId :: Metadata -> IO ApplicationId
 getApplicationId block = do
   idPtr <- c_get_application_id block
-  B.packCStringLen (idPtr, 4)
+  mkApplicationId <$> B.packCStringLen (idPtr, 4)
 
 foreign import ccall unsafe "FLAC__metadata_get_application_id"
   c_get_application_id :: Metadata -> IO CString
@@ -173,11 +173,9 @@ foreign import ccall unsafe "FLAC__metadata_get_application_data"
 
 -- | Set application id for given metadata block.
 
-setApplicationId :: Metadata -> ByteString -> IO ()
+setApplicationId :: Metadata -> ApplicationId -> IO ()
 setApplicationId block appId =
-  B.useAsCString appId' (c_set_application_id block)
-  where
-    appId' = B.take 4 (appId <> B.replicate 4 0x00)
+  B.useAsCString (unApplicationId appId) (c_set_application_id block)
 
 foreign import ccall unsafe "FLAC__metadata_set_application_id"
   c_set_application_id :: Metadata -> CString -> IO ()

@@ -95,6 +95,9 @@ module Codec.Audio.FLAC.Metadata
   , MD5Sum (..)
   , Duration (..)
   , Application (..)
+  , ApplicationId
+  , mkApplicationId
+  , unApplicationId
   , SeekTable (..)
   , SeekPoint (..)
   , VorbisVendor (..)
@@ -129,13 +132,11 @@ import Data.Default.Class
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Foreign hiding (void)
 import Prelude hiding (iterate)
 import System.IO
-import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE
 import qualified Data.Vector           as V
@@ -458,10 +459,9 @@ instance MetaValue Duration where
     sampleRate   <- fromIntegral <$> retrieve SampleRate
     return (totalSamples / sampleRate)
 
--- | Application metadata. The 'ByteString' argument to 'Application' data
--- constructor (application's ID) should be four bytes long. If it's too
--- short, null bytes will be appended to it to make it four bytes long. If
--- it's too long, it will be truncated.
+-- | Application metadata. The 'ApplicationId' argument to 'Application'
+-- data constructor can be written using usual Haskell syntax for 'String'
+-- literals, just make sure to enable the @OverloadedStrings@ extension.
 --
 -- For the list of defined application IDs, see:
 --
@@ -469,20 +469,20 @@ instance MetaValue Duration where
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'ByteString'@.
 
-data Application = Application ByteString
+data Application = Application ApplicationId
 
 instance MetaValue Application where
   type MetaType Application = Maybe ByteString
   type MetaWritable Application = ()
   retrieve (Application appId) =
-    FlacMeta . withApplicationBlock (fixAppId appId) $
+    FlacMeta . withApplicationBlock appId $
       liftIO . (iteratorGetBlock >=> getApplicationData)
   Application appId =-> Nothing =
-    void . FlacMeta . withApplicationBlock (fixAppId appId) $ \i -> do
+    void . FlacMeta . withApplicationBlock appId $ \i -> do
       liftBool (iteratorDeleteBlock i)
       setModified
   Application appId =-> Just data' =
-    FlacMeta . withApplicationBlock' (fixAppId appId) $ \i -> do
+    FlacMeta . withApplicationBlock' appId $ \i -> do
       block <- liftIO (iteratorGetBlock i)
       liftBool (setApplicationData block data')
       setModified
@@ -739,7 +739,7 @@ withMetaBlock' = withMetaBlockGen' noCheck noSet
 -- 'ApplicationBlock' that has specified application id.
 
 withApplicationBlock
-  :: ByteString        -- ^ Application id to find
+  :: ApplicationId     -- ^ Application id to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
 withApplicationBlock givenId =
@@ -751,7 +751,7 @@ withApplicationBlock givenId =
 -- given id if no such block can be found.
 
 withApplicationBlock'
-  :: ByteString        -- ^ Application id to find
+  :: ApplicationId     -- ^ Application id to find
   -> (MetaIterator -> Inner a) -- ^ What to do if such block found
   -> Inner a           -- ^ Result
 withApplicationBlock' givenId =
@@ -890,8 +890,3 @@ vorbisFieldName RGTrackGain = "REPLAYGAIN_TRACK_GAIN"
 vorbisFieldName RGAlbumPeak = "REPLAYGAIN_ALBUM_PEAK"
 vorbisFieldName RGAlbumGain = "REPLAYGAIN_ALBUM_GAIN"
 vorbisFieldName field = (B8.pack . fmap toUpper . show) field
-
--- | Fix application id so it's exactly 4 bytes long.
-
-fixAppId :: ByteString -> ByteString
-fixAppId appId = B.take 4 (appId <> B.replicate 4 0x00)

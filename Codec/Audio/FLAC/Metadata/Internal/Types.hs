@@ -19,6 +19,9 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , MetadataType (..)
   , FlacMetaException (..)
   , MetaChainStatus (..)
+  , ApplicationId
+  , mkApplicationId
+  , unApplicationId
   , SeekPoint (..)
   , PictureType (..)
   , PictureData (..) )
@@ -26,9 +29,13 @@ where
 
 import Control.Exception (Exception)
 import Data.ByteString (ByteString)
+import Data.Monoid ((<>))
+import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Void
 import Foreign
+import qualified Data.ByteString       as B
+import qualified Data.ByteString.Char8 as B8
 
 -- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
 -- pointer to metadata chain.
@@ -109,6 +116,34 @@ data MetaChainStatus
   | MetaChainStatusWrongWriteCall
     -- ^ Should not ever happen when you use this binding.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | A normalizing wrapper around 'ByteString' that makes sure that the
+-- 'ByteString' inside is a valid FLAC application name. You can create
+-- values of this type using Haskell string literals with
+-- @OverloadedStrings@ or with 'mkApplicationId'. Extract the inner
+-- 'ByteString' with 'unApplicationId'.
+
+newtype ApplicationId = ApplicationId ByteString
+  deriving (Eq, Ord)
+
+instance Show ApplicationId where
+  show (ApplicationId appId) = show appId
+
+instance IsString ApplicationId where
+  fromString = mkApplicationId . B8.pack
+
+-- | Application id must be four bytes long. If it's too short, null bytes
+-- will be appended to it to make it four bytes long. If it's too long, it
+-- will be truncated.
+
+mkApplicationId :: ByteString -> ApplicationId
+mkApplicationId appId = ApplicationId $
+  B.take 4 (appId <> B.replicate 4 0x00)
+
+-- | Get 'ByteString' from 'ApplicationId'.
+
+unApplicationId :: ApplicationId -> ByteString
+unApplicationId (ApplicationId appId) = appId
 
 -- | The datatype represents a single point in a seek table metadata block.
 
