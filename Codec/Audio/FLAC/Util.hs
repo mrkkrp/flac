@@ -12,11 +12,18 @@
 module Codec.Audio.FLAC.Util
   ( maybePtr
   , toEnum'
-  , fromEnum' )
+  , fromEnum'
+  , peekCStringText
+  , withCStringText )
 where
 
+import Data.Text (Text)
 import Foreign
+import Foreign.C.String
 import Unsafe.Coerce
+import qualified Data.ByteString    as B
+import qualified Data.Text          as T
+import qualified Data.Text.Encoding as T
 
 -- | Coerce to 'Ptr' and check if it's a null pointer, return 'Nothing' if
 -- it is, otherwise return the given pointer unchanged. Needless to say that
@@ -36,3 +43,15 @@ toEnum' = toEnum . fromIntegral
 
 fromEnum' :: (Integral a, Enum b) => b -> a
 fromEnum' = fromIntegral . fromEnum
+
+-- | Peek 'CString' and decode it as UTF-8 encoded value.
+
+peekCStringText :: CString -> IO Text
+peekCStringText = fmap T.decodeUtf8 . B.packCString
+
+-- | Convert a 'Text' value to null-terminated C string that will be freed
+-- automatically. Null bytes are removed from the 'Text' value first.
+
+withCStringText :: Text -> (CString -> IO a) -> IO a
+withCStringText text = B.useAsCString bytes
+  where bytes = T.encodeUtf8 (T.filter (/= '\0') text)
