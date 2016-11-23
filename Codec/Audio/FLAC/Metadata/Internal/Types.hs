@@ -69,8 +69,8 @@ data MetadataType
 data FlacMetaException
   = FlacMetaGeneralProblem MetaChainStatus
     -- ^ General failure, see the attached 'MetaChainStatus'
-  | FlacMetaIncorrectSeekTable
-    -- ^ Incorrect seek table was passed to be written
+  | FlacMetaInvalidSeekTable
+    -- ^ Invalid seek table was passed to be written
   deriving (Eq, Show, Read)
 
 instance Exception FlacMetaException

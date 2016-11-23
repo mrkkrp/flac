@@ -234,7 +234,7 @@ setSeekPoints block seekPoints = do
               else do
                 legal <- objectSeektableIsLegal block
                 unless legal $
-                  throwM FlacMetaIncorrectSeekTable
+                  throwM FlacMetaInvalidSeekTable
       in go 0 >> return True
     else return False
 

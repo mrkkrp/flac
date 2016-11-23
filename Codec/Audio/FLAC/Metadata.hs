@@ -489,8 +489,8 @@ instance MetaValue Application where
 
 -- | Seek table as a 'Vector' of 'SeekPoint's. Seek points within a table
 -- must be sorted in ascending order by sample number. If you try to write
--- an incorrect seek table, 'FlacMetaException' will be raised with
--- 'FlacMetaIncorrectSeekTable' constructor.
+-- an invalid seek table, 'FlacMetaException' will be raised with
+-- 'FlacMetaInvalidSeekTable' constructor.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' ('Vector'
 -- 'SeekPoint')@.
