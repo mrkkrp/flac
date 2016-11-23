@@ -213,7 +213,7 @@ instance Default FlacMetaSettings where
 -- control subtle and rather low-level details of metadata editing, just
 -- pass 'def' unless you know what you are doing. 'FilePath' specifies
 -- location of FLAC file to read\/edit in the file system. 'FlacMeta' is a
--- monadic action that describes what to do with metadata. Compose it using
+-- monadic action that describes what to do with metadata. Compose it from
 -- 'retrieve' and @('=->')@.
 --
 -- The action will throw 'Data.Text.Encoding.Error.UnicodeException' if text
@@ -273,9 +273,9 @@ class MetaValue a where
   -- | Given value that determines what to write and a value to write,
   -- add\/replace a piece of metadata information. This is how you edit
   -- metadata. To delete something, set it to 'Nothing' (well, it should be
-  -- something that /can be missing/, for example you cannot delete sample
-  -- rate attribute). If 'MetaWritable' is defined, this method must be
-  -- defined as well.
+  -- something that /can be missing/, for example you cannot delete
+  -- 'SampleRate' attribute). If 'MetaWritable' is defined, this method must
+  -- be defined as well.
 
   (=->) :: MetaWritable a => a -> MetaType a -> FlacMeta ()
   _ =-> _ = error "Codec.Audio.FLAC.Metadata.(=->) is not defined"
@@ -368,8 +368,8 @@ instance MetaValue Channels where
   retrieve Channels = inStreamInfo getChannels
 
 -- | Bits per sample (sample depth). FLAC supports from 4 to 32 bits per
--- sample. Currently the reference encoder and decoders only support up to
--- 24 bits per sample.
+-- sample. Currently the reference encoder and decoder only support up to 24
+-- bits per sample.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
 
