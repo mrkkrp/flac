@@ -205,15 +205,15 @@ data PictureType
 -- | Representation of picture contained in a FLAC metadata block.
 
 data PictureData = PictureData
-  { pictureMimeType    :: Text
+  { pictureMimeType    :: !Text
     -- ^ The picture's MIME data. For best compatibility with players, use
     -- picture data of MIME type @image\/jpeg@ or @image\/png@.
-  , pictureDescription :: Text   -- ^ Picture's description.
-  , pictureWidth       :: Word32 -- ^ Picture's width in pixels.
-  , pictureHeight      :: Word32 -- ^ Picture's height in pixels.
-  , pictureDepth       :: Word32 -- ^ Picture's color depth in bits-per-pixel.
-  , pictureColors      :: Word32
+  , pictureDescription :: !Text   -- ^ Picture's description.
+  , pictureWidth       :: !Word32 -- ^ Picture's width in pixels.
+  , pictureHeight      :: !Word32 -- ^ Picture's height in pixels.
+  , pictureDepth       :: !Word32 -- ^ Picture's color depth in bits-per-pixel.
+  , pictureColors      :: !Word32
     -- ^ For indexed palettes (like GIF), picture's number of colors (the
     -- number of palette entries), or 0 for non-indexed (i.e. 2 ^ depth).
-  , pictureData        :: ByteString -- ^ Binary picture data.
+  , pictureData        :: !ByteString -- ^ Binary picture data.
   } deriving (Eq, Ord, Show, Read)
