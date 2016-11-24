@@ -77,7 +77,7 @@ objectPictureIsLegal block = alloca $ \cstrPtr -> do
     then return Nothing
     else Just <$> (peek cstrPtr >>= peekCStringText)
 
-foreign import ccall unsafe "FLAC__metadata_object_seektable_is_legal"
+foreign import ccall unsafe "FLAC__metadata_object_picture_is_legal"
   c_object_picture_is_legal :: Metadata -> Ptr CString -> IO Bool
 
 -- | Set the MIME type of a given picture block.

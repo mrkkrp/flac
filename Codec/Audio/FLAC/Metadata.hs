@@ -621,7 +621,9 @@ instance MetaValue VorbisComment where
 
 -- | Picture embedded in FLAC file. A FLAC file can have several pictures
 -- attached to it, you choose which one you want by specifying
--- 'PictureType'.
+-- 'PictureType'. If you try to write an invalid picture 'FlacMetaException'
+-- will be raised with 'FlacMetaInvalidPicture' constructor which includes a
+-- 'Text' value with explanation why the picture was considered invalid.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
 

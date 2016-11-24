@@ -378,10 +378,16 @@ setPictureData block PictureData {..} = do
   c_set_picture_height block pictureHeight
   c_set_picture_depth  block pictureDepth
   c_set_picture_colors block pictureColors
-  shortcutFalse
+  goodOutcome <- shortcutFalse
     [ objectPictureSetMimeType    block pictureMimeType
     , objectPictureSetDescription block pictureDescription
     , objectPictureSetData        block pictureData ]
+  when goodOutcome $ do
+     res <- objectPictureIsLegal block
+     case res of
+       Nothing  -> return ()
+       Just msg -> throwM (FlacMetaInvalidPicture msg)
+  return goodOutcome
 
 foreign import ccall unsafe "FLAC__metadata_set_picture_width"
   c_set_picture_width :: Metadata -> Word32 -> IO ()

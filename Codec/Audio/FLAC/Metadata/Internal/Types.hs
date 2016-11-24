@@ -71,6 +71,9 @@ data FlacMetaException
     -- ^ General failure, see the attached 'MetaChainStatus'
   | FlacMetaInvalidSeekTable
     -- ^ Invalid seek table was passed to be written
+  | FlacMetaInvalidPicture Text
+    -- ^ Invalid picture data was passed to be written. The reason why the
+    -- data was invalid is attached.
   deriving (Eq, Show, Read)
 
 instance Exception FlacMetaException
