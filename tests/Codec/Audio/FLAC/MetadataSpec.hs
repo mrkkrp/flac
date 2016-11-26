@@ -30,51 +30,67 @@
 -- ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 -- POSSIBILITY OF SUCH DAMAGE.
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module Codec.Audio.FLAC.MetadataSpec
   ( spec )
 where
 
--- import Codec.Audio.FLAC.Metadata
--- import Control.Monad.IO.Class (MonadIO (..))
--- import Crypto.Hash
--- import Data.Default.Class
+import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
+import Control.Monad.IO.Class (MonadIO (..))
+import Data.Default.Class
+import Data.List.NonEmpty (NonEmpty (..))
+import System.Directory
+import System.IO.Temp (withSystemTempFile)
 import Test.Hspec
+import qualified Codec.Audio.FLAC.Metadata as Flac
 
 spec :: Spec
-spec = -- dummy test for now
-  describe "it" $
-    it "works" $ pending -- do
-      -- let path = "/home/mark/store/music/Adam Lambert/2015, The Original High/01 Ghost Town.flac"
-      -- r <- runFlacMeta def path $ do
-      --   retrieve MinBlockSize >>= liftIO . print
-      --   retrieve MaxBlockSize >>= liftIO . print
-      --   retrieve MinFrameSize >>= liftIO . print
-      --   retrieve MaxFrameSize >>= liftIO . print
-      --   retrieve SampleRate >>= liftIO . print
-      --   retrieve Channels >>= liftIO . print
-      --   retrieve BitsPerSample >>= liftIO . print
-      --   retrieve TotalSamples >>= liftIO . print
-      --   retrieve FileSize >>= liftIO . print
-      --   retrieve BitRate  >>= liftIO . print
-      --   digest <- digestFromByteString <$> retrieve MD5Sum
-      --   liftIO . print $ (digest :: Maybe (Digest MD5))
-      --   retrieve Duration >>= liftIO . print
-      --   liftIO $ putStrLn "-----------------"
-      --   retrieve VorbisVendor >>= liftIO . print
-      --   retrieve (VorbisComment Title) >>= liftIO . print
-      --   retrieve (VorbisComment Version) >>= liftIO . print
-      --   retrieve (VorbisComment Album) >>= liftIO . print
-      --   retrieve (VorbisComment TrackNumber) >>= liftIO . print
-      --   retrieve (VorbisComment TrackTotal) >>= liftIO . print
-      --   retrieve (VorbisComment Artist) >>= liftIO . print
-      --   retrieve (VorbisComment Performer) >>= liftIO . print
-      --   retrieve (VorbisComment Copyright) >>= liftIO . print
-      --   retrieve (VorbisComment License) >>= liftIO . print
-      --   retrieve (VorbisComment Organization) >>= liftIO . print
-      --   retrieve (VorbisComment Description) >>= liftIO . print
-      --   retrieve (VorbisComment Genre) >>= liftIO . print
-      --   retrieve (VorbisComment Date) >>= liftIO . print
-      --   retrieve (VorbisComment Location) >>= liftIO . print
-      --   retrieve (VorbisComment Contact) >>= liftIO . print
-      --   retrieve (VorbisComment ISRC) >>= liftIO . print
-      -- r `shouldBe` Right ()
+spec = around withSandbox $ do
+
+  describe "MinBlockSize" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve MinBlockSize
+        liftIO (v `shouldBe` 4096)
+        chainIntact
+
+  describe "MaxBlockSize" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve MaxBlockSize
+        liftIO (v `shouldBe` 4096)
+        chainIntact
+
+----------------------------------------------------------------------------
+-- Helpers
+
+-- | Type constrained version of 'Flac.runFlacMeta' to remove type
+-- ambiguity.
+
+runFlacMeta :: FlacMetaSettings -> FilePath -> FlacMeta a -> IO a
+runFlacMeta = Flac.runFlacMeta
+
+-- | Make a temporary copy of @audio-samples/sample.flac@ file and provide
+-- the path to the file. Automatically remove the file when the test
+-- finishes.
+
+withSandbox :: ActionWith FilePath -> IO ()
+withSandbox action = withSystemTempFile "sample.flac" $ \path _ -> do
+  copyFile "audio-samples/sample.flac" path
+  action path
+
+-- | Check that the meta chain is intact.
+
+chainIntact :: FlacMeta ()
+chainIntact = do
+  chain <- getMetaChain
+  liftIO (chain `shouldBe` stdChain)
+  modified <- isMetaChainModified
+  liftIO (modified `shouldBe` False)
+
+-- | The sequence of metadata blocks as they appear in unmodified sample we
+-- use in these tests.
+
+stdChain :: NonEmpty MetadataType
+stdChain = StreamInfoBlock :| [VorbisCommentBlock, PaddingBlock]
