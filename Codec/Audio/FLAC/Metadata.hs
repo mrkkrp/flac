@@ -828,10 +828,11 @@ withMetaBlockGen' check setParam givenType f = do
         then
           let acquire = liftMaybe (objectNew givenType)
               release = liftIO . objectDelete
-          in bracketOnError acquire release $ \block -> do
-               setParam block
-               liftBool (iteratorInsertBlockAfter i block)
-               Just <$> f i
+          in do
+            bracketOnError acquire release $ \block -> do
+              setParam block
+              liftBool (iteratorInsertBlockAfter i block)
+            Just <$> f i
         else return Nothing
     Just x -> return x
 

@@ -154,11 +154,10 @@ spec = around withSandbox $ do
         retrieve (Application "bobo") `shouldReturn` Nothing
 
   describe "SeekTable" $ do
-    it "raises exception when invalid seek table given" $
-      const pending -- FIXME
-      -- let m = runFlacMeta def path $
-      --       SeekTable =-> Just invalidSeekTable
-      -- m `shouldThrow` (== FlacMetaInvalidSeekTable)
+    it "raises exception when invalid seek table given" $ \path -> do
+      let m = runFlacMeta def path $
+            SeekTable =-> Just invalidSeekTable
+      m `shouldThrow` (== FlacMetaInvalidSeekTable)
     it "is set/read/deleted correctly" $ \path -> do
       -- Can set seek table if it's correct.
       runFlacMeta def path $ do
@@ -264,11 +263,11 @@ spec = around withSandbox $ do
         retrieve (VorbisComment vfield) `shouldReturn` Nothing
 
   describe "Picture" . forM_ [minBound..maxBound] $ \ptype -> do
-    it (show ptype ++ " raises exception on invalid picture") $
-      const pending -- FIXME
-      -- let m = runFlacMeta def path $
-      --       Picture ptype =-> Just invalidPicture
-      -- m `shouldThrow` (== FlacMetaInvalidPicture "Foo!")
+    it (show ptype ++ " raises exception on invalid picture") $ \path -> do
+      let m = runFlacMeta def path $
+            Picture ptype =-> Just invalidPicture
+          mimeTypeError = "MIME type string must contain only printable ASCII characters (0x20-0x7e)"
+      m `shouldThrow` (== FlacMetaInvalidPicture mimeTypeError)
     it (show ptype ++ " is set/read/deleted correctly") $ \path -> do
       -- Can set a picture.
       runFlacMeta def path $ do
@@ -397,11 +396,11 @@ testSeekTable = V.fromList
 
 -- | An invalid seek table.
 
--- invalidSeekTable :: Vector SeekPoint
--- invalidSeekTable = V.fromList
---   [ SeekPoint 0 0 100
---   , SeekPoint 0 0 108
---   , SeekPoint 0 0 101 ]
+invalidSeekTable :: Vector SeekPoint
+invalidSeekTable = V.fromList
+  [ SeekPoint 0 0 100
+  , SeekPoint 0 0 108
+  , SeekPoint 0 0 101 ]
 
 -- | A correct picture.
 
@@ -417,12 +416,12 @@ testPicture = PictureData
 
 -- | An invalid picture.
 
--- invalidPicture :: PictureData
--- invalidPicture = PictureData
---   { pictureMimeType    = "application\1/jpeg"
---   , pictureDescription = "Bad\1 description."
---   , pictureWidth       = 100
---   , pictureHeight      = 100
---   , pictureDepth       = 24
---   , pictureColors      = 0
---   , pictureData        = "Some picture data goes here, honest." }
+invalidPicture :: PictureData
+invalidPicture = PictureData
+  { pictureMimeType    = "application\1/jpeg"
+  , pictureDescription = "Bad\1 description."
+  , pictureWidth       = 100
+  , pictureHeight      = 100
+  , pictureDepth       = 24
+  , pictureColors      = 0
+  , pictureData        = "Some picture data goes here, honest." }
