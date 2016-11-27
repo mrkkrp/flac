@@ -41,101 +41,170 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
 import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Vector (Vector)
 import System.Directory
 import System.IO.Temp (withSystemTempFile)
-import Test.Hspec
+import Test.Hspec hiding (shouldBe, shouldReturn)
 import qualified Codec.Audio.FLAC.Metadata as Flac
-import qualified Data.ByteString as B
+import qualified Data.ByteString           as B
+import qualified Data.Vector               as V
+import qualified Test.Hspec                as Hspec
+
+-- TODO How to share the same sandbox between several subsequent tests? This
+-- would allow for more precise labelling.
 
 spec :: Spec
 spec = around withSandbox $ do
-
   describe "MinBlockSize" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve MinBlockSize
-        liftIO (v `shouldBe` 4096)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve MinBlockSize `shouldReturn` 4096
 
   describe "MaxBlockSize" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve MaxBlockSize
-        liftIO (v `shouldBe` 4096)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve MaxBlockSize `shouldReturn` 4096
 
   describe "MinFrameSize" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve MinFrameSize
-        liftIO (v `shouldBe` 1270)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve MinFrameSize `shouldReturn` 1270
 
   describe "MaxFrameSize" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve MaxFrameSize
-        liftIO (v `shouldBe` 2504)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve MaxFrameSize `shouldReturn` 2504
 
   describe "SampleRate" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve SampleRate
-        liftIO (v `shouldBe` 44100)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve SampleRate `shouldReturn` 44100
 
   describe "SampleRate" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve Channels
-        liftIO (v `shouldBe` 2)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve Channels `shouldReturn` 2
 
   describe "BitsPerSample" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve BitsPerSample
-        liftIO (v `shouldBe` 16)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve BitsPerSample `shouldReturn` 16
 
   describe "TotalSamples" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve TotalSamples
-        liftIO (v `shouldBe` 18304)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve TotalSamples `shouldReturn` 18304
 
   describe "FileSize" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve FileSize
-        liftIO (v `shouldBe` 11459)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve FileSize `shouldReturn` 11459
 
   describe "BitRate" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve BitRate
-        liftIO (v `shouldBe` 220)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve BitRate `shouldReturn` 220
 
   describe "MD5Sum" $
     it "is read correctly" $ \path ->
-      runFlacMeta def path $ do
-        v <- retrieve MD5Sum
-        liftIO (v `shouldBe` refMD5Sum)
-        chainIntact
+      runFlacMeta def path . checkNoMod $
+        retrieve MD5Sum `shouldReturn` refMD5Sum
 
   describe "Duration" $
     it "is read correctly" $ \path ->
+      runFlacMeta def path . checkNoMod $
+        retrieve Duration `shouldReturn` 0.41505668934240364
+
+  describe "Application" $
+    it "is set/read/deleted correctly" $ \path -> do
+      -- Can set application data.
       runFlacMeta def path $ do
-        v <- retrieve Duration
-        liftIO (v `shouldBe` 0.41505668934240364)
-        chainIntact
+        Application "foo"  =-> Just "foo"
+        Application "bobo" =-> Just "bobo"
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [ApplicationBlock,ApplicationBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $ do
+        retrieve (Application "foo")  `shouldReturn` Just "foo"
+        retrieve (Application "bobo") `shouldReturn` Just "bobo"
+      -- Can wipe one without affecting the other.
+      runFlacMeta def path $ do
+        Application "foo" =-> Nothing
+        retrieve (Application "foo")  `shouldReturn` Nothing
+        retrieve (Application "bobo") `shouldReturn` Just "bobo"
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [ApplicationBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can overwrite application data.
+      runFlacMeta def path $ do
+        Application "bobo" =-> Just "moon"
+        retrieve (Application "bobo") `shouldReturn` Just "moon"
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [ApplicationBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can wipe the other one bringing it to the default state.
+      runFlacMeta def path $ do
+        Application "bobo" =-> Nothing
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+
+  describe "SeekTable" $ do
+    it "raises exception when invalid seek table given" $
+      const pending
+      -- FIXME Invalid seek tables raise exceptions.
+      -- let m = runFlacMeta def path $
+      --       SeekTable =-> Just invalidSeekTable
+      -- m `shouldThrow` (== FlacMetaInvalidSeekTable)
+      -- Can set seek table if it's correct.
+    it "is set/read/deleted correctly" $ \path -> do
+      runFlacMeta def path $ do
+        SeekTable =-> Just testSeekTable
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [SeekTableBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $
+        retrieve SeekTable `shouldReturn` Just testSeekTable
+      -- Can delete it.
+      runFlacMeta def path $ do
+        SeekTable =-> Nothing
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+    context "when auto-vacuum disabled" $
+      it "can write empty seek table" $ \path -> do
+        runFlacMeta def { flacMetaAutoVacuum = False } path $ do
+          SeekTable =-> Just V.empty
+          getMetaChain `shouldReturn` StreamInfoBlock :|
+            [SeekTableBlock,VorbisCommentBlock,PaddingBlock]
+          isMetaChainModified `shouldReturn` True
+        runFlacMeta def path . checkNoMod $
+          retrieve SeekTable `shouldReturn` Just V.empty
+    context "when auto-vacuum enabled" $
+      it "empty seek table is removed automatically" $ \path -> do
+        runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+          SeekTable =-> Just V.empty
+          getMetaChain `shouldReturn` StreamInfoBlock :|
+            [SeekTableBlock,VorbisCommentBlock,PaddingBlock]
+          isMetaChainModified `shouldReturn` True
+        runFlacMeta def path . checkNoMod $
+          retrieve SeekTable `shouldReturn` Nothing
 
 ----------------------------------------------------------------------------
 -- Helpers
+
+infix 1 `shouldBe`, `shouldReturn`
+
+-- | Lifted 'Hspec.shouldBe'.
+
+shouldBe :: (MonadIO m, Show a, Eq a) => a -> a -> m ()
+shouldBe x y = liftIO (x `Hspec.shouldBe` y)
+
+-- | Lifted 'Hspec.shouldReturn'.
+
+shouldReturn :: (MonadIO m, Show a, Eq a) => m a -> a -> m ()
+shouldReturn m y = m >>= (`shouldBe` y)
 
 -- | Type constrained version of 'Flac.runFlacMeta' to remove type
 -- ambiguity.
@@ -152,14 +221,16 @@ withSandbox action = withSystemTempFile "sample.flac" $ \path _ -> do
   copyFile "audio-samples/sample.flac" path
   action path
 
--- | Check that the meta chain is intact.
+-- | Check that the inner action does not modify the chain.
 
-chainIntact :: FlacMeta ()
-chainIntact = do
-  chain <- getMetaChain
-  liftIO (chain `shouldBe` refChain)
-  modified <- isMetaChainModified
-  liftIO (modified `shouldBe` False)
+checkNoMod :: FlacMeta a -> FlacMeta a
+checkNoMod m = do
+  chainBefore <- getMetaChain
+  result <- m
+  chainAfter  <- getMetaChain
+  chainAfter `shouldBe` chainBefore
+  isMetaChainModified `shouldReturn` False
+  return result
 
 -- | MD5 sum of uncompressed audio data of the unmodified sample we use in
 -- these tests.
@@ -172,3 +243,19 @@ refMD5Sum = B.pack [89,191,106,236,125,27,65,161,78,138,172,153,91,60,42,109]
 
 refChain :: NonEmpty MetadataType
 refChain = StreamInfoBlock :| [VorbisCommentBlock, PaddingBlock]
+
+-- | A dummy correct seek table.
+
+testSeekTable :: Vector SeekPoint
+testSeekTable = V.fromList
+  [ SeekPoint 1 10 100
+  , SeekPoint 2 20 108
+  , SeekPoint 3 30 101 ]
+
+-- | A dummy invalid seek table.
+
+-- invalidSeekTable :: Vector SeekPoint
+-- invalidSeekTable = V.fromList
+--   [ SeekPoint 0 0 100
+--   , SeekPoint 0 0 108
+--   , SeekPoint 0 0 101 ]
