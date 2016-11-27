@@ -155,8 +155,7 @@ spec = around withSandbox $ do
 
   describe "SeekTable" $ do
     it "raises exception when invalid seek table given" $
-      const pending
-      -- FIXME Invalid seek tables raise exceptions.
+      const pending -- FIXME
       -- let m = runFlacMeta def path $
       --       SeekTable =-> Just invalidSeekTable
       -- m `shouldThrow` (== FlacMetaInvalidSeekTable)
@@ -173,8 +172,7 @@ spec = around withSandbox $ do
       -- Can delete it.
       runFlacMeta def path $ do
         SeekTable =-> Nothing
-        getMetaChain `shouldReturn` StreamInfoBlock :|
-          [VorbisCommentBlock,PaddingBlock]
+        getMetaChain `shouldReturn` refChain
         isMetaChainModified `shouldReturn` True
     context "when auto-vacuum disabled" $
       it "can write empty seek table" $ \path -> do
@@ -196,8 +194,7 @@ spec = around withSandbox $ do
           isMetaChainModified `shouldReturn` True
         runFlacMeta def path . checkNoMod $ do
           retrieve SeekTable `shouldReturn` Nothing
-          getMetaChain `shouldReturn` StreamInfoBlock :|
-            [VorbisCommentBlock,PaddingBlock]
+          getMetaChain `shouldReturn` refChain
 
   describe "VorbisVendor" $ do
     it "is set/read correctly" $ \path -> do
@@ -261,11 +258,81 @@ spec = around withSandbox $ do
       runFlacMeta def path $ do
         VorbisComment vfield =-> Nothing
         retrieve (VorbisComment vfield) `shouldReturn` Nothing
-        getMetaChain `shouldReturn` StreamInfoBlock :|
-          [VorbisCommentBlock,PaddingBlock]
+        getMetaChain `shouldReturn` refChain
         isMetaChainModified `shouldReturn` True
       runFlacMeta def path . checkNoMod $
         retrieve (VorbisComment vfield) `shouldReturn` Nothing
+
+  describe "Picture" . forM_ [minBound..maxBound] $ \ptype -> do
+    it (show ptype ++ " raises exception on invalid picture") $
+      const pending -- FIXME
+      -- let m = runFlacMeta def path $
+      --       Picture ptype =-> Just invalidPicture
+      -- m `shouldThrow` (== FlacMetaInvalidPicture "Foo!")
+    it (show ptype ++ " is set/read/deleted correctly") $ \path -> do
+      -- Can set a picture.
+      runFlacMeta def path $ do
+        Picture ptype =-> Just testPicture
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [PictureBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $
+        retrieve (Picture ptype) `shouldReturn` Just testPicture
+      -- Can delete it.
+      runFlacMeta def path $ do
+        Picture ptype =-> Nothing
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        Picture ptype =-> Nothing
+
+  describe "wipeVorbisComment" $
+    it "wipes all “vorbis comment” metadata blocks" $ \path -> do
+      runFlacMeta def path $ do
+        VorbisComment Title  =-> Just "Title"
+        VorbisComment Artist =-> Just "Artist"
+      runFlacMeta def path $ do
+        wipeVorbisComment
+        getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
+
+  describe "wipeApplications" $
+    it "wipes all “application” metadata blocks" $ \path -> do
+      runFlacMeta def path $ do
+        Application "foo"  =-> Just "foo"
+        Application "bobo" =-> Just "bobo"
+      runFlacMeta def path $ do
+        wipeApplications
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        getMetaChain `shouldReturn` refChain
+
+  describe "wipeSeekTable" $
+    it "wipes all “seek table” metadata blocks" $ \path -> do
+      runFlacMeta def path $
+        SeekTable =-> Just testSeekTable
+      runFlacMeta def path $ do
+        wipeSeekTable
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        getMetaChain `shouldReturn` refChain
+
+  describe "wipePictures" $
+    it "wipes all “picture” metadata blocks" $ \path -> do
+      runFlacMeta def path $ do
+        Picture PictureFrontCover =-> Just testPicture
+        Picture PictureBackCover  =-> Just testPicture
+      runFlacMeta def path $ do
+        wipePictures
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        getMetaChain `shouldReturn` refChain
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -320,7 +387,7 @@ refMD5Sum = B.pack [89,191,106,236,125,27,65,161,78,138,172,153,91,60,42,109]
 refChain :: NonEmpty MetadataType
 refChain = StreamInfoBlock :| [VorbisCommentBlock, PaddingBlock]
 
--- | A dummy correct seek table.
+-- | A correct seek table.
 
 testSeekTable :: Vector SeekPoint
 testSeekTable = V.fromList
@@ -328,10 +395,34 @@ testSeekTable = V.fromList
   , SeekPoint 2 20 108
   , SeekPoint 3 30 101 ]
 
--- | A dummy invalid seek table.
+-- | An invalid seek table.
 
 -- invalidSeekTable :: Vector SeekPoint
 -- invalidSeekTable = V.fromList
 --   [ SeekPoint 0 0 100
 --   , SeekPoint 0 0 108
 --   , SeekPoint 0 0 101 ]
+
+-- | A correct picture.
+
+testPicture :: PictureData
+testPicture = PictureData
+  { pictureMimeType    = "application/jpeg"
+  , pictureDescription = "Good description."
+  , pictureWidth       = 100
+  , pictureHeight      = 100
+  , pictureDepth       = 24
+  , pictureColors      = 0
+  , pictureData        = "Some picture data goes here, honest." }
+
+-- | An invalid picture.
+
+-- invalidPicture :: PictureData
+-- invalidPicture = PictureData
+--   { pictureMimeType    = "application\1/jpeg"
+--   , pictureDescription = "Bad\1 description."
+--   , pictureWidth       = 100
+--   , pictureHeight      = 100
+--   , pictureDepth       = 24
+--   , pictureColors      = 0
+--   , pictureData        = "Some picture data goes here, honest." }
