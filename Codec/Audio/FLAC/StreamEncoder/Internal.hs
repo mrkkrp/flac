@@ -14,8 +14,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Codec.Audio.FLAC.StreamEncoder.Internal
-  ( encoderNew
-  , encoderDelete
+  ( withEncoder
   , encoderSetChannels
   , encoderSetBitsPerSample
   , encoderSetSampleRate
@@ -40,10 +39,24 @@ where
 
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Codec.Audio.FLAC.Util
+import Control.Monad.Catch
 import Data.Void
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+
+-- | Create and use an 'Encoder'. The encoder is guaranteed to be freed even
+-- in case of exception.
+--
+-- If memory for the encoder cannot be allocated, corresponding
+-- 'FlacEncoderException' is raised.
+
+withEncoder :: (Encoder -> IO a) -> IO a
+withEncoder f = bracket encoderNew (mapM_ encoderDelete) $ \mencoder ->
+  case mencoder of
+    Nothing -> throwM
+      (FlacEncoderFailed EncoderStateMemoryAllocationError)
+    Just x -> f x
 
 -- | Create a new stream encoder instance with default settings. In the case
 -- of memory allocation problem 'Nothing' is returned.
@@ -142,7 +155,10 @@ foreign import ccall unsafe "FLAC__stream_encoder_get_state"
 
 -- | Initialize the encoder instance to encode native FLAC files.
 
-encoderInitFile :: Encoder -> FilePath -> IO EncoderInitStatus
+encoderInitFile
+  :: Encoder           -- ^ Uninitialized encoder instance
+  -> FilePath          -- ^ Name of file to encode to
+  -> IO EncoderInitStatus
 encoderInitFile encoder path =
   withCString path $ \cstr ->
     toEnum' <$> c_encoder_init_file encoder cstr nullPtr nullPtr

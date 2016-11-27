@@ -36,6 +36,7 @@
 
 #include <FLAC/stream_encoder.h>
 
-FLAC__bool FLAC__stream_encoder_process_wav(FLAC__StreamEncoder *, const char *);
+FLAC__bool FLAC__stream_encoder_get_wave_info(FLAC__uint32 *, FLAC__uint32 *, FLAC__uint32 *);
+FLAC__bool FLAC__stream_encoder_process_wave(FLAC__StreamEncoder *, const char *);
 
 #endif /* FLAC__STREAM_ENCODER_HELPERS_H */

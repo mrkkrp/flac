@@ -12,11 +12,13 @@
 module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   ( Encoder (..)
   , EncoderInitStatus (..)
-  , EncoderState (..) )
+  , EncoderState (..)
+  , FlacEncoderException (..) )
 where
 
-import Foreign
+import Control.Exception
 import Data.Void
+import Foreign
 
 -- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
 -- pointer to encoder instance.
@@ -81,6 +83,27 @@ data EncoderState
     -- ^ An I\/O error occurred while opening\/reading\/writing a file.
   | EncoderStateFramingError
     -- ^ An error occurred while writing the stream.
-  | EnocderStateMemoryAllocationError
+  | EncoderStateMemoryAllocationError
     -- ^ Memory allocation failed.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | Exception that is thrown when encoding fails for some reason.
+
+data FlacEncoderException
+  = FlacEncoderInvalidWaveFile FilePath
+    -- ^ The given input WAVE file has invalid format.
+  | FlacEncoderInvalidChannels Word32
+    -- ^ The encoder was given input with invalid number of channels
+    -- (attached).
+  | FlacEncoderInvalidBitsPerSample Word32
+    -- ^ The encoder was given input with invalid bits per sample
+    -- (attached).
+  | FlacEncoderInvalidSampleRate Word32
+    -- ^ The encoder was given input with invalid sample rate (attached).
+  | FlacEncoderInitFailed EncoderInitStatus
+    -- ^ Encoder initialization failed.
+  | FlacEncoderFailed EncoderState
+    -- ^ Encoder failed.
+  deriving (Eq, Show, Read)
+
+instance Exception FlacEncoderException

@@ -7,7 +7,21 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Interface to stream encoder.
+-- Interface to the stream encoder.
+--
+-- === How to use this module
+--
+-- Just call the 'encodeFlac' function with 'EncoderSettings', input and
+-- output file names.
+--
+-- === Low-level details
+--
+-- The implementation uses the reference implementation of FLAC — libFLAC (C
+-- library) under the hood. This means you'll need at least version 1.3.0 of
+-- libFLAC (released 26 May 2013) installed for the binding to work.
+--
+-- The module only works with input in form of WAVE files (TODO which
+-- exactly).
 
 {-# LANGUAGE RecordWildCards #-}
 
@@ -21,7 +35,7 @@ where
 import Codec.Audio.FLAC.StreamEncoder.Internal
 import Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
-import Control.Exception (bracket)
+import Control.Exception
 import Control.Monad.Except
 import Data.Bool (bool)
 import Data.Default.Class
@@ -38,12 +52,25 @@ import Data.Word
 -- necessary to achieve good results, though.
 
 data EncoderSettings = EncoderSettings
-  { encoderChannels      :: !Word32 -- ^ Number of channels, default is 2
-  , encoderBitsPerSample :: !Word32 -- ^ Sample resolution in bits, default is 16
-  , encoderSampleRate    :: !Word32 -- ^ Sample rate in Hz, default is 44100
-  , encoderCompression   :: !Word32 -- ^ Compression level [0..8], default is 5
-  , encoderBlockSize     :: !Word32 -- ^ Block size, default is 0
-  , encoderVerify        :: !Bool   -- ^ Verify result (slower), default is 'False'
+  { encoderChannels      :: Word32 -> Bool
+    -- ^ A function that validates number of channels in the source audio.
+    -- It should return 'True' if the number of channels is acceptable. By
+    -- default 1–8 channels are acceptable.
+  , encoderBitsPerSample :: Word32 -> Bool
+    -- ^ A function that validates bits per sample in the source audio. It
+    -- should return 'True' if the value is acceptable. By default values
+    -- from 4 to 24 (inclusive) are acceptable (corresponds to values that
+    -- are supported by the reference encoder and decoder).
+  , encoderSampleRate    :: Word32 -> Bool
+    -- ^ A function that validates sample rate of source audio. It should
+    -- return 'True' if the value is acceptable. By default Sample rate in
+    -- Hz, default values from 1 to 655350 Hz are acceptable.
+  , encoderCompression   :: !Word32
+    -- ^ Compression level [0..8], default is 5.
+  , encoderBlockSize     :: !Word32
+    -- ^ Block size, default is 0.
+  , encoderVerify        :: !Bool
+    -- ^ Verify result (slower), default is 'False'.
   , encoderDoMidSideStereo :: !(Maybe Bool)
     -- ^ Enable mid-side encoding on stereo input. The number of channels
     -- must be 2 for this to have any effect. Default value: 'Nothing'.
@@ -51,23 +78,15 @@ data EncoderSettings = EncoderSettings
 
 instance Default EncoderSettings where
   def = EncoderSettings
-    { encoderChannels      = 2
-    , encoderBitsPerSample = 16
-    , encoderSampleRate    = 44100
-    , encoderCompression   = 5
-    , encoderBlockSize     = 0
-    , encoderVerify        = False
-    , encoderDoMidSideStereo = Nothing
-    }
-
--- https://xiph.org/flac/api/group__flac__stream__encoder.html
--- Work with files, encode directly from a file.
-
-data EncoderFailure
-  = EncoderInitFailed EncoderInitStatus
-  | EncoderFailed     EncoderState
-
-type Inner a = ExceptT EncoderFailure IO a
+    { encoderChannels        = 1 `to` 8
+    , encoderBitsPerSample   = 4 `to` 24
+    , encoderSampleRate      = 1 `to` 655350
+    , encoderCompression     = 5
+    , encoderBlockSize       = 0
+    , encoderVerify          = False
+    , encoderDoMidSideStereo = Nothing }
+    where
+      to a b n = n >= a && n <= b
 
 -- | Encode a file (?) to native FLAC.
 
@@ -76,58 +95,53 @@ encodeFlac
   => EncoderSettings   -- ^ Encoder settings
   -> FilePath          -- ^ File to encode
   -> FilePath          -- ^ Where to save the resulting FLAC file
-  -> m (Either EncoderFailure ())
-encodeFlac EncoderSettings {..} source result =
-  liftIO (bracket acquire release action)
-  where
-    acquire = encoderNew
-    release = mapM_ encoderDelete
-    action mencoder =
-      case mencoder of
-        Just encoder -> runExceptT $ do
-          liftInit (encoderSetChannels      encoder encoderChannels)
-          liftInit (encoderSetBitsPerSample encoder encoderBitsPerSample)
-          liftInit (encoderSetSampleRate    encoder encoderSampleRate)
-          liftInit (encoderSetCompression   encoder encoderCompression)
-          liftInit (encoderSetBlockSize     encoder encoderBlockSize)
-          liftInit (encoderSetVerify        encoder encoderVerify)
-          forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify encoder)
-          -- TODO add more parameters here later
-          liftInit' (encoderInitFile encoder result)
-          liftBool encoder (encoderProcessWav encoder source)
-          liftBool encoder (encoderFinish encoder)
-        Nothing -> (return . Left . EncoderFailed)
-          EnocderStateMemoryAllocationError
+  -> m ()
+encodeFlac EncoderSettings {..} source result = liftIO . withEncoder $ \e -> do
+  mwaveInfo <- encoderGetWaveInfo source
+  case mwaveInfo of
+    Nothing -> throwIO (FlacEncoderInvalidWaveFile source)
+    Just (channels, bitsPerSample, sampleRate) -> do
+      unless (encoderChannels channels) $
+        throwIO (FlacEncoderInvalidChannels channels)
+      unless (encoderBitsPerSample bitsPerSample) $
+        throwIO (FlacEncoderInvalidBitsPerSample bitsPerSample)
+      unless (encoderSampleRate sampleRate) $
+        throwIO (FlacEncoderInvalidSampleRate sampleRate)
+      liftInit (encoderSetChannels      e channels)
+      liftInit (encoderSetBitsPerSample e bitsPerSample)
+      liftInit (encoderSetSampleRate    e sampleRate)
+      liftInit (encoderSetCompression   e encoderCompression)
+      liftInit (encoderSetBlockSize     e encoderBlockSize)
+      liftInit (encoderSetVerify        e encoderVerify)
+      forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify e)
+      -- TODO add more parameters here later
+      initStatus <- encoderInitFile e result
+      case initStatus of
+        EncoderInitStatusOK -> return ()
+        status -> throwIO (FlacEncoderInitFailed status)
+      liftBool e (encoderProcessWave e source)
+      liftBool e (encoderFinish e)
 
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | Lift an initializing action that returns 'False' on failure into
--- 'Inner' monad taking care of error reporting. In case of trouble,
--- 'EncoderInitFailed' 'EncoderInitStatusAlreadyInitialized' is thrown.
+-- | Execute an initializing action that returns 'False' on failure and take
+-- care of error reporting. In case of trouble, @'FlacEncoderInitFailed'
+-- 'EncoderInitStatusAlreadyInitialized'@ is thrown.
 
-liftInit :: IO Bool -> Inner ()
-liftInit m = liftIO m >>= bool throw (return ())
+liftInit :: IO Bool -> IO ()
+liftInit m = liftIO m >>= bool t (return ())
   where
-    throw = throwError (EncoderInitFailed EncoderInitStatusAlreadyInitialized)
+    t = throwIO (FlacEncoderInitFailed EncoderInitStatusAlreadyInitialized)
 
--- | Lift an action that returns 'EncoderInitStatus' taking care of error
--- reporting.
+-- | Execute an action that returns 'False' on failure into taking care of
+-- error reporting. In case of trouble @'EncoderFailed'@ with encoder status
+-- attached is thrown.
 
-liftInit' :: IO EncoderInitStatus -> Inner ()
-liftInit' m = do
-  res <- liftIO m
-  case res of
-    EncoderInitStatusOK -> return ()
-    status -> throwError (EncoderInitFailed status)
-
--- | Lift an action that returns 'False' on failure into 'Inner' monad
--- taking care of error reporting.
-
-liftBool :: Encoder -> IO Bool -> Inner ()
+liftBool :: Encoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwStatus encoder) (return ())
 
 -- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
 
-throwStatus :: Encoder -> Inner a
-throwStatus = liftIO . encoderGetState >=> throwError . EncoderFailed
+throwStatus :: Encoder -> IO a
+throwStatus = encoderGetState >=> throwIO . FlacEncoderFailed

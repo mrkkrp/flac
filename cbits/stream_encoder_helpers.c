@@ -33,6 +33,12 @@
 
 #include "stream_encoder_helpers.h"
 
+FLAC__bool FLAC__stream_encoder_get_wave_info
+  (FLAC__uint32 *channels, FLAC__uint32 *bps, FLAC__uint32 *sample_rate)
+{
+  return true;
+}
+
 FLAC__bool FLAC__stream_encoder_process_wav
   (FLAC__StreamEncoder *encoder, const char *source)
 {
