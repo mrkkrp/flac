@@ -37,6 +37,7 @@ module Codec.Audio.FLAC.MetadataSpec
 where
 
 import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
+import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
 import Data.Default.Class
@@ -148,6 +149,9 @@ spec = around withSandbox $ do
         Application "bobo" =-> Nothing
         getMetaChain `shouldReturn` refChain
         isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $ do
+        retrieve (Application "foo")  `shouldReturn` Nothing
+        retrieve (Application "bobo") `shouldReturn` Nothing
 
   describe "SeekTable" $ do
     it "raises exception when invalid seek table given" $
@@ -156,8 +160,8 @@ spec = around withSandbox $ do
       -- let m = runFlacMeta def path $
       --       SeekTable =-> Just invalidSeekTable
       -- m `shouldThrow` (== FlacMetaInvalidSeekTable)
-      -- Can set seek table if it's correct.
     it "is set/read/deleted correctly" $ \path -> do
+      -- Can set seek table if it's correct.
       runFlacMeta def path $ do
         SeekTable =-> Just testSeekTable
         getMetaChain `shouldReturn` StreamInfoBlock :|
@@ -176,6 +180,7 @@ spec = around withSandbox $ do
       it "can write empty seek table" $ \path -> do
         runFlacMeta def { flacMetaAutoVacuum = False } path $ do
           SeekTable =-> Just V.empty
+          retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain `shouldReturn` StreamInfoBlock :|
             [SeekTableBlock,VorbisCommentBlock,PaddingBlock]
           isMetaChainModified `shouldReturn` True
@@ -185,11 +190,82 @@ spec = around withSandbox $ do
       it "empty seek table is removed automatically" $ \path -> do
         runFlacMeta def { flacMetaAutoVacuum = True } path $ do
           SeekTable =-> Just V.empty
+          retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain `shouldReturn` StreamInfoBlock :|
             [SeekTableBlock,VorbisCommentBlock,PaddingBlock]
           isMetaChainModified `shouldReturn` True
-        runFlacMeta def path . checkNoMod $
+        runFlacMeta def path . checkNoMod $ do
           retrieve SeekTable `shouldReturn` Nothing
+          getMetaChain `shouldReturn` StreamInfoBlock :|
+            [VorbisCommentBlock,PaddingBlock]
+
+  describe "VorbisVendor" $ do
+    it "is set/read correctly" $ \path -> do
+      -- Can set vorbis vendor.
+      runFlacMeta def path $ do
+        VorbisVendor =-> Just "foo"
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $
+        retrieve VorbisVendor `shouldReturn` Just "foo"
+    context "when auto-vacuum disabled" $
+      it "deletion just sets the field to empty string" $ \path -> do
+        runFlacMeta def { flacMetaAutoVacuum = False } path $ do
+          VorbisVendor =-> Nothing
+          retrieve VorbisVendor `shouldReturn` Just ""
+          getMetaChain `shouldReturn` StreamInfoBlock :|
+            [VorbisCommentBlock,PaddingBlock]
+          isMetaChainModified `shouldReturn` True
+        runFlacMeta def path . checkNoMod $
+          retrieve VorbisVendor `shouldReturn` Just ""
+    context "when auto-vacuum enabled" $ do
+      context "when no other vorbis fields set" $
+        it "empty vendor causes removal of vorbis vendor block" $ \path -> do
+          runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+            VorbisVendor =-> Nothing
+            retrieve VorbisVendor `shouldReturn` Just ""
+            getMetaChain `shouldReturn` StreamInfoBlock :|
+              [VorbisCommentBlock,PaddingBlock]
+            isMetaChainModified `shouldReturn` True
+          runFlacMeta def path . checkNoMod $ do
+            retrieve VorbisVendor `shouldReturn` Nothing
+            getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
+      context "when other vorbis fields exist" $
+        it "deletion just sets the field to empty string" $ \path -> do
+          runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+            VorbisComment Title =-> Just "bobla"
+            VorbisVendor =-> Nothing
+            retrieve VorbisVendor `shouldReturn` Just ""
+            getMetaChain `shouldReturn` StreamInfoBlock :|
+              [VorbisCommentBlock,PaddingBlock]
+            isMetaChainModified `shouldReturn` True
+          runFlacMeta def path . checkNoMod $ do
+            retrieve VorbisVendor `shouldReturn` Just ""
+            getMetaChain `shouldReturn` StreamInfoBlock :|
+              [VorbisCommentBlock,PaddingBlock]
+
+  describe "VorbisComment" . forM_ [minBound..maxBound] $ \vfield ->
+    it (show vfield ++ " is set/read/deleted correctly") $ \path -> do
+      -- Can set vorbis comment.
+      runFlacMeta def path $ do
+        VorbisComment vfield =-> Just "foo"
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $
+        retrieve (VorbisComment vfield) `shouldReturn` Just "foo"
+      -- Can delete it.
+      runFlacMeta def path $ do
+        VorbisComment vfield =-> Nothing
+        retrieve (VorbisComment vfield) `shouldReturn` Nothing
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        retrieve (VorbisComment vfield) `shouldReturn` Nothing
 
 ----------------------------------------------------------------------------
 -- Helpers
