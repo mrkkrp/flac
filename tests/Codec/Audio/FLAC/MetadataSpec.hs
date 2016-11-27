@@ -38,12 +38,14 @@ where
 
 import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.ByteString (ByteString)
 import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import System.Directory
 import System.IO.Temp (withSystemTempFile)
 import Test.Hspec
 import qualified Codec.Audio.FLAC.Metadata as Flac
+import qualified Data.ByteString as B
 
 spec :: Spec
 spec = around withSandbox $ do
@@ -60,6 +62,76 @@ spec = around withSandbox $ do
       runFlacMeta def path $ do
         v <- retrieve MaxBlockSize
         liftIO (v `shouldBe` 4096)
+        chainIntact
+
+  describe "MinFrameSize" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve MinFrameSize
+        liftIO (v `shouldBe` 1270)
+        chainIntact
+
+  describe "MaxFrameSize" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve MaxFrameSize
+        liftIO (v `shouldBe` 2504)
+        chainIntact
+
+  describe "SampleRate" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve SampleRate
+        liftIO (v `shouldBe` 44100)
+        chainIntact
+
+  describe "SampleRate" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve Channels
+        liftIO (v `shouldBe` 2)
+        chainIntact
+
+  describe "BitsPerSample" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve BitsPerSample
+        liftIO (v `shouldBe` 16)
+        chainIntact
+
+  describe "TotalSamples" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve TotalSamples
+        liftIO (v `shouldBe` 18304)
+        chainIntact
+
+  describe "FileSize" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve FileSize
+        liftIO (v `shouldBe` 11459)
+        chainIntact
+
+  describe "BitRate" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve BitRate
+        liftIO (v `shouldBe` 220)
+        chainIntact
+
+  describe "MD5Sum" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve MD5Sum
+        liftIO (v `shouldBe` refMD5Sum)
+        chainIntact
+
+  describe "Duration" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path $ do
+        v <- retrieve Duration
+        liftIO (v `shouldBe` 0.41505668934240364)
         chainIntact
 
 ----------------------------------------------------------------------------
@@ -85,12 +157,18 @@ withSandbox action = withSystemTempFile "sample.flac" $ \path _ -> do
 chainIntact :: FlacMeta ()
 chainIntact = do
   chain <- getMetaChain
-  liftIO (chain `shouldBe` stdChain)
+  liftIO (chain `shouldBe` refChain)
   modified <- isMetaChainModified
   liftIO (modified `shouldBe` False)
 
--- | The sequence of metadata blocks as they appear in unmodified sample we
--- use in these tests.
+-- | MD5 sum of uncompressed audio data of the unmodified sample we use in
+-- these tests.
 
-stdChain :: NonEmpty MetadataType
-stdChain = StreamInfoBlock :| [VorbisCommentBlock, PaddingBlock]
+refMD5Sum :: ByteString
+refMD5Sum = B.pack [89,191,106,236,125,27,65,161,78,138,172,153,91,60,42,109]
+
+-- | The sequence of metadata blocks as they appear in the unmodified sample
+-- we use in these tests.
+
+refChain :: NonEmpty MetadataType
+refChain = StreamInfoBlock :| [VorbisCommentBlock, PaddingBlock]
