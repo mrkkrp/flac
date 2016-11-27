@@ -9,16 +9,13 @@
 --
 -- Mostly non-public metadata-specific helper types.
 
-{-# LANGUAGE CPP             #-}
-{-# LANGUAGE RecordWildCards #-}
-
 module Codec.Audio.FLAC.Metadata.Internal.Types
   ( MetaChain (..)
   , MetaIterator (..)
   , Metadata (..)
   , MetadataType (..)
-  , FlacMetaException (..)
   , MetaChainStatus (..)
+  , FlacMetaException (..)
   , ApplicationId
   , mkApplicationId
   , unApplicationId
@@ -63,21 +60,6 @@ data MetadataType
   | UndefinedBlock     -- ^ Undefined block
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
--- | Exception that is thrown when manipulation of FLAC metadata failed for
--- some reason.
-
-data FlacMetaException
-  = FlacMetaGeneralProblem MetaChainStatus
-    -- ^ General failure, see the attached 'MetaChainStatus'
-  | FlacMetaInvalidSeekTable
-    -- ^ Invalid seek table was passed to be written
-  | FlacMetaInvalidPicture Text
-    -- ^ Invalid picture data was passed to be written. The reason why the
-    -- data was invalid is attached.
-  deriving (Eq, Show, Read)
-
-instance Exception FlacMetaException
-
 -- | Enumeration of meta chain statuses.
 
 data MetaChainStatus
@@ -120,6 +102,21 @@ data MetaChainStatus
     -- ^ Should not ever happen when you use this binding.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
+-- | Exception that is thrown when manipulation of FLAC metadata fails for
+-- some reason.
+
+data FlacMetaException
+  = FlacMetaGeneralProblem MetaChainStatus
+    -- ^ General failure, see the attached 'MetaChainStatus'
+  | FlacMetaInvalidSeekTable
+    -- ^ Invalid seek table was passed to be written
+  | FlacMetaInvalidPicture Text
+    -- ^ Invalid picture data was passed to be written. The reason why the
+    -- data was invalid is attached.
+  deriving (Eq, Show, Read)
+
+instance Exception FlacMetaException
+
 -- | A normalizing wrapper around 'ByteString' that makes sure that the
 -- 'ByteString' inside is a valid FLAC application name. You can create
 -- values of this type using Haskell string literals with
@@ -159,24 +156,6 @@ data SeekPoint = SeekPoint
   , seekPointFrameSamples :: !Word32
     -- ^ The number of samples in the target frame
   } deriving (Eq, Ord, Show, Read)
-
-instance Storable SeekPoint where
-  -- NOTE The values are correct for my x86_64 machine, but they are here
-  -- just to remove the warning, we don't use them in this binding, as it's
-  -- not reliable and on machines with different architectures they may be
-  -- simply incorrect. So to read an array of values, we use a helper that
-  -- returns pointer to Nth element of array and recreate it this way.
-  sizeOf    _ = 24
-  alignment _ = 8
-  peek ptr = do
-    seekPointSampleNumber <- peekByteOff ptr 0
-    seekPointStreamOffset <- peekByteOff ptr 8
-    seekPointFrameSamples <- peekByteOff ptr 16
-    return SeekPoint {..}
-  poke ptr SeekPoint {..} = do
-    pokeByteOff ptr  0 seekPointSampleNumber
-    pokeByteOff ptr  8 seekPointStreamOffset
-    pokeByteOff ptr 16 seekPointFrameSamples
 
 -- | Type of picture FLAC metadata can contain. There may be several
 -- metadata blocks containing pictures of different “types”.

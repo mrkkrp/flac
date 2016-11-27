@@ -202,7 +202,11 @@ getSeekPoints block = do
   v    <- VM.new size
   let go n =
         when (n < size) $ do
-          c_get_seek_point block (fromIntegral n) >>= peek >>= VM.write v n
+          ptr <- c_get_seek_point block (fromIntegral n)
+          seekPointSampleNumber <- peekByteOff ptr 0
+          seekPointStreamOffset <- peekByteOff ptr 8
+          seekPointFrameSamples <- peekByteOff ptr 16
+          VM.write v n SeekPoint {..}
           go (n + 1)
   go 0
   V.unsafeFreeze v
