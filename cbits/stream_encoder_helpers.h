@@ -35,8 +35,14 @@
 #define FLAC__STREAM_ENCODER_HELPERS_H
 
 #include <FLAC/stream_encoder.h>
+#include <stdlib.h>
+#include <string.h>
 
-FLAC__bool FLAC__stream_encoder_get_wave_info(FLAC__uint32 *, FLAC__uint32 *, FLAC__uint32 *);
-FLAC__bool FLAC__stream_encoder_process_wave(FLAC__StreamEncoder *, const char *);
+typedef enum {
+  FORMAT_WAVE,
+  FORMAT_RF64
+} FLAC__InputFileFormat;
+
+FLAC__bool FLAC__stream_encoder_process_helper(FLAC__StreamEncoder *, FLAC__InputFileFormat, FLAC__uint64, FLAC__uint64, const char *, const char *);
 
 #endif /* FLAC__STREAM_ENCODER_HELPERS_H */

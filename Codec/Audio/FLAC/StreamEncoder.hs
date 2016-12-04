@@ -7,21 +7,19 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Interface to the stream encoder.
+-- The module contains a Haskell interface to FLAC stream encoder.
 --
 -- === How to use this module
 --
 -- Just call the 'encodeFlac' function with 'EncoderSettings', input and
--- output file names.
+-- output file names. The 'encodeFlac' function only encodes vanilla WAVE
+-- and RF64.
 --
 -- === Low-level details
 --
 -- The implementation uses the reference implementation of FLAC — libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
---
--- The module only works with input in form of WAVE files (TODO which
--- exactly).
 
 {-# LANGUAGE RecordWildCards #-}
 
@@ -35,6 +33,7 @@ where
 import Codec.Audio.FLAC.StreamEncoder.Internal
 import Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
+import Codec.Audio.Wave
 import Control.Exception
 import Control.Monad.Except
 import Data.Bool (bool)
@@ -52,24 +51,11 @@ import Data.Word
 -- necessary to achieve good results, though.
 
 data EncoderSettings = EncoderSettings
-  { encoderChannels      :: Word32 -> Bool
-    -- ^ A function that validates number of channels in the source audio.
-    -- It should return 'True' if the number of channels is acceptable. By
-    -- default 1–8 channels are acceptable.
-  , encoderBitsPerSample :: Word32 -> Bool
-    -- ^ A function that validates bits per sample in the source audio. It
-    -- should return 'True' if the value is acceptable. By default values
-    -- from 4 to 24 (inclusive) are acceptable (corresponds to values that
-    -- are supported by the reference encoder and decoder).
-  , encoderSampleRate    :: Word32 -> Bool
-    -- ^ A function that validates sample rate of source audio. It should
-    -- return 'True' if the value is acceptable. By default Sample rate in
-    -- Hz, default values from 1 to 655350 Hz are acceptable.
-  , encoderCompression   :: !Word32
+  { encoderCompression :: !Word32
     -- ^ Compression level [0..8], default is 5.
-  , encoderBlockSize     :: !Word32
+  , encoderBlockSize :: !Word32
     -- ^ Block size, default is 0.
-  , encoderVerify        :: !Bool
+  , encoderVerify :: !Bool
     -- ^ Verify result (slower), default is 'False'.
   , encoderDoMidSideStereo :: !(Maybe Bool)
     -- ^ Enable mid-side encoding on stereo input. The number of channels
@@ -78,17 +64,23 @@ data EncoderSettings = EncoderSettings
 
 instance Default EncoderSettings where
   def = EncoderSettings
-    { encoderChannels        = 1 `to` 8
-    , encoderBitsPerSample   = 4 `to` 24
-    , encoderSampleRate      = 1 `to` 655350
-    , encoderCompression     = 5
+    { encoderCompression     = 5
     , encoderBlockSize       = 0
     , encoderVerify          = False
     , encoderDoMidSideStereo = Nothing }
-    where
-      to a b n = n >= a && n <= b
 
--- | Encode a file (?) to native FLAC.
+-- | Encode a WAVE file or RF64 file to native FLAC.
+--
+-- If the input file is not a valid WAVE file, 'WaveException' will be
+-- thrown. 'FlacEncoderException' is thrown when underlying FLAC encoder
+-- reports a problem.
+--
+-- Please note that there are a number of limitations on parameters of input
+-- audio stream (imposed by current reference FLAC implementation):
+--
+--     * Number of channels may be only 1–8 inclusive.
+--     * Supported values for bits per sample are 4–24 inclusive.
+--     * Acceptable sample rate lies in the range 1–655350 inclusive.
 
 encodeFlac
   :: MonadIO m
@@ -96,31 +88,30 @@ encodeFlac
   -> FilePath          -- ^ File to encode
   -> FilePath          -- ^ Where to save the resulting FLAC file
   -> m ()
-encodeFlac EncoderSettings {..} source result = liftIO . withEncoder $ \e -> do
-  mwaveInfo <- encoderGetWaveInfo source
-  case mwaveInfo of
-    Nothing -> throwIO (FlacEncoderInvalidWaveFile source)
-    Just (channels, bitsPerSample, sampleRate) -> do
-      unless (encoderChannels channels) $
-        throwIO (FlacEncoderInvalidChannels channels)
-      unless (encoderBitsPerSample bitsPerSample) $
-        throwIO (FlacEncoderInvalidBitsPerSample bitsPerSample)
-      unless (encoderSampleRate sampleRate) $
-        throwIO (FlacEncoderInvalidSampleRate sampleRate)
-      liftInit (encoderSetChannels      e channels)
-      liftInit (encoderSetBitsPerSample e bitsPerSample)
-      liftInit (encoderSetSampleRate    e sampleRate)
-      liftInit (encoderSetCompression   e encoderCompression)
-      liftInit (encoderSetBlockSize     e encoderBlockSize)
-      liftInit (encoderSetVerify        e encoderVerify)
-      forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify e)
-      -- TODO add more parameters here later
-      initStatus <- encoderInitFile e result
-      case initStatus of
-        EncoderInitStatusOK -> return ()
-        status -> throwIO (FlacEncoderInitFailed status)
-      liftBool e (encoderProcessWave e source)
-      liftBool e (encoderFinish e)
+encodeFlac EncoderSettings {..} ipath opath = liftIO . withEncoder $ \e -> do
+  wave <- readWaveFile ipath
+  let channels      = fromIntegral (waveChannels wave)
+      bitsPerSample = fromIntegral (waveBitsPerSample wave)
+      sampleRate    = waveSampleRate wave
+  liftInit (encoderSetChannels      e channels)
+  liftInit (encoderSetBitsPerSample e bitsPerSample)
+  liftInit (encoderSetSampleRate    e sampleRate)
+  liftInit (encoderSetCompression   e encoderCompression)
+  liftInit (encoderSetBlockSize     e encoderBlockSize)
+  liftInit (encoderSetVerify        e encoderVerify)
+  forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify e)
+  -- TODO add more parameters here later
+  initStatus <- encoderInitFile e opath
+  case initStatus of
+    EncoderInitStatusOK -> return ()
+    status -> throwIO (FlacEncoderInitFailed status)
+  liftBool e $ encoderProcessHelper e
+    (waveFileFormat wave)
+    (fromIntegral $ waveDataOffset wave)
+    (waveDataSize wave)
+    ipath
+    opath
+  liftBool e (encoderFinish e)
 
 ----------------------------------------------------------------------------
 -- Helpers

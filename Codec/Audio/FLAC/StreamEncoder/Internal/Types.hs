@@ -13,7 +13,9 @@ module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   ( Encoder (..)
   , EncoderInitStatus (..)
   , EncoderState (..)
-  , FlacEncoderException (..) )
+  , FlacEncoderException (..)
+  , AudioInfo (..)
+  , AudioFormat (..) )
 where
 
 import Control.Exception
@@ -90,20 +92,29 @@ data EncoderState
 -- | Exception that is thrown when encoding fails for some reason.
 
 data FlacEncoderException
-  = FlacEncoderInvalidWaveFile FilePath
-    -- ^ The given input WAVE file has invalid format.
-  | FlacEncoderInvalidChannels Word32
-    -- ^ The encoder was given input with invalid number of channels
-    -- (attached).
-  | FlacEncoderInvalidBitsPerSample Word32
-    -- ^ The encoder was given input with invalid bits per sample
-    -- (attached).
-  | FlacEncoderInvalidSampleRate Word32
-    -- ^ The encoder was given input with invalid sample rate (attached).
-  | FlacEncoderInitFailed EncoderInitStatus
+  = FlacEncoderInitFailed EncoderInitStatus
     -- ^ Encoder initialization failed.
   | FlacEncoderFailed EncoderState
     -- ^ Encoder failed.
   deriving (Eq, Show, Read)
 
 instance Exception FlacEncoderException
+
+-- | An internal record holding parameters of input file.
+
+data AudioInfo = AudioInfo
+  { audioInfoFormat        :: !AudioFormat -- ^ Format of file
+  , audioInfoChannels      :: !Word32      -- ^ Number of channels
+  , audioInfoBitsPerSample :: !Word32      -- ^ Bits per sample
+  , audioInfoSampleRate    :: !Word32      -- ^ Sample rate
+  , audioInfoFileSize      :: !Integer     -- ^ File size
+  } deriving (Show, Read, Eq, Ord)
+
+-- | An internal data type that represents all input file formats the
+-- library can work with.
+
+data AudioFormat
+  = FormatWave
+  | FormatWave64
+  | FormatRF64
+  deriving (Show, Read, Eq, Ord, Bounded, Enum)

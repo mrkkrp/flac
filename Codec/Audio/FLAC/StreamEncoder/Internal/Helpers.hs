@@ -10,46 +10,54 @@
 -- Wrappers around helpers written to help work with stream encoder.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings        #-}
 
 module Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
-  ( encoderGetWaveInfo
-  , encoderProcessWave )
+  ( encoderProcessHelper )
 where
 
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
-import Foreign
+import Codec.Audio.FLAC.Util
+import Codec.Audio.Wave
+import Control.Monad.Catch
+import Control.Monad.Reader
+import Data.Word (Word64)
 import Foreign.C.String
+import Foreign.C.Types
+import System.Directory
+import System.FilePath
+import System.IO
 
--- | Get parameters of given WAVE file in the following order:
---     * number of channels;
---     * number of bits per sample;
---     * sample rate in Hz.
---
--- If given file is not recognized as a WAVE file, 'Nothing' is returned.
+-- | Encode given input file, return 'False' in case of failure.
 
-encoderGetWaveInfo :: FilePath -> IO (Maybe (Word32, Word32, Word32))
-encoderGetWaveInfo path = withCString path $ \pathPtr ->
-  alloca $ \channelsPtr ->
-    alloca $ \bpsPtr ->
-      alloca $ \sampleRatePtr -> do
-        res <- c_encoder_get_wave_info pathPtr channelsPtr bpsPtr sampleRatePtr
-        if res
-          then return Nothing
-          else do
-            channels      <- peek channelsPtr
-            bitsPerSample <- peek bpsPtr
-            sampleRate    <- peek sampleRatePtr
-            return $ Just (channels, bitsPerSample, sampleRate)
+encoderProcessHelper
+  :: Encoder           -- ^ 'Encoder' to use
+  -> WaveFormat        -- ^ Audio format of input file
+  -> Word64            -- ^ Offset of data chunk
+  -> Word64            -- ^ Size of data chunk
+  -> FilePath          -- ^ Location of input file
+  -> FilePath          -- ^ Location of output file
+  -> IO Bool
+encoderProcessHelper encoder fmt dataOffset dataSize ipath' opath' = do
+  ipath <- makeAbsolute ipath'
+  opath <- makeAbsolute opath'
+  let acquire = fst <$> openBinaryTempFile odir ofile
+      cleanup = removeFile
+      odir    = takeDirectory opath
+      ofile   = takeFileName  opath
+  bracketOnError acquire cleanup $ \otemp    ->
+    withCString ipath            $ \ipathPtr ->
+      withCString otemp          $ \otempPtr -> do
+        result <- c_encoder_process_helper
+          encoder             -- stream encoder
+          (fromEnum' fmt)     -- format of input file
+          dataOffset          -- offset of data chunk
+          dataSize            -- size of data chunk
+          ipathPtr            -- path to input file
+          otempPtr            -- path to output temp file
+        when result (renameFile otemp opath)
+        return result
 
-foreign import ccall unsafe "FLAC__stream_encoder_get_wave_info"
-  c_encoder_get_wave_info
-    :: CString -> Ptr Word32 -> Ptr Word32 -> Ptr Word32 -> IO Bool
-
--- | Encode given WAVE file, return 'False' in case of failure.
-
-encoderProcessWave :: Encoder -> FilePath -> IO Bool
-encoderProcessWave encoder path =
-  withCString path (c_encoder_process_wave encoder)
-
-foreign import ccall unsafe "FLAC__stream_encoder_process_wav"
-  c_encoder_process_wave :: Encoder -> CString -> IO Bool
+foreign import ccall unsafe "FLAC__stream_encoder_process_helper"
+  c_encoder_process_helper
+    :: Encoder -> CUInt -> Word64 -> Word64 -> CString -> CString -> IO Bool
