@@ -130,7 +130,7 @@ foreign import ccall unsafe "FLAC__stream_encoder_set_blocksize"
 encoderSetDoMidSideStereo :: Encoder -> Bool -> IO Bool
 encoderSetDoMidSideStereo = c_encoder_set_do_mid_side_stereo
 
-foreign import ccall unsafe "FLAC_stream_encoder_set_do_mid_side_stereo"
+foreign import ccall unsafe "FLAC__stream_encoder_set_do_mid_side_stereo"
   c_encoder_set_do_mid_side_stereo :: Encoder -> Bool -> IO Bool
 
 -- | Set the “verify” flag. If true, the encoder will verify it's own

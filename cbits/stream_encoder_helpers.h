@@ -38,11 +38,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum {
-  FORMAT_WAVE,
-  FORMAT_RF64
-} FLAC__InputFileFormat;
-
-FLAC__bool FLAC__stream_encoder_process_helper(FLAC__StreamEncoder *, FLAC__InputFileFormat, FLAC__uint64, FLAC__uint64, const char *, const char *);
+FLAC__bool FLAC__stream_encoder_process_helper(FLAC__StreamEncoder *, FLAC__uint64, FLAC__uint64, const char *);
 
 #endif /* FLAC__STREAM_ENCODER_HELPERS_H */

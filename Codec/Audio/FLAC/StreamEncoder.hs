@@ -39,6 +39,9 @@ import Control.Monad.Except
 import Data.Bool (bool)
 import Data.Default.Class
 import Data.Word
+import System.Directory
+import System.FilePath
+import System.IO
 
 -- | Parameters of stream encoder and input to encode. Note that the
 -- 'encoderCompression' parameter influences a number of other parameters on
@@ -88,7 +91,9 @@ encodeFlac
   -> FilePath          -- ^ File to encode
   -> FilePath          -- ^ Where to save the resulting FLAC file
   -> m ()
-encodeFlac EncoderSettings {..} ipath opath = liftIO . withEncoder $ \e -> do
+encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
+  ipath <- makeAbsolute ipath'
+  opath <- makeAbsolute opath'
   wave <- readWaveFile ipath
   let channels      = fromIntegral (waveChannels wave)
       bitsPerSample = fromIntegral (waveBitsPerSample wave)
@@ -101,17 +106,22 @@ encodeFlac EncoderSettings {..} ipath opath = liftIO . withEncoder $ \e -> do
   liftInit (encoderSetVerify        e encoderVerify)
   forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify e)
   -- TODO add more parameters here later
-  initStatus <- encoderInitFile e opath
-  case initStatus of
-    EncoderInitStatusOK -> return ()
-    status -> throwIO (FlacEncoderInitFailed status)
-  liftBool e $ encoderProcessHelper e
-    (waveFileFormat wave)
-    (fromIntegral $ waveDataOffset wave)
-    (waveDataSize wave)
-    ipath
-    opath
-  liftBool e (encoderFinish e)
+  let acquire = openBinaryTempFile odir ofile
+      cleanup = removeFile . fst
+      odir    = takeDirectory opath
+      ofile   = takeFileName  opath
+  bracketOnError acquire cleanup $ \(otemp, h) -> do
+    hClose h
+    initStatus <- encoderInitFile e otemp
+    case initStatus of
+      EncoderInitStatusOK -> return ()
+      status -> throwIO (FlacEncoderInitFailed status)
+    liftBool e $ encoderProcessHelper e
+      (fromIntegral $ waveDataOffset wave)
+      (waveDataSize wave)
+      ipath
+    renameFile otemp opath
+    liftBool e (encoderFinish e)
 
 ----------------------------------------------------------------------------
 -- Helpers
@@ -130,9 +140,9 @@ liftInit m = liftIO m >>= bool t (return ())
 -- attached is thrown.
 
 liftBool :: Encoder -> IO Bool -> IO ()
-liftBool encoder m = liftIO m >>= bool (throwStatus encoder) (return ())
+liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
 -- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
 
-throwStatus :: Encoder -> IO a
-throwStatus = encoderGetState >=> throwIO . FlacEncoderFailed
+throwState :: Encoder -> IO a
+throwState = encoderGetState >=> throwIO . FlacEncoderFailed
