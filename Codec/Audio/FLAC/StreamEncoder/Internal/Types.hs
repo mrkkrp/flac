@@ -13,7 +13,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   ( Encoder (..)
   , EncoderInitStatus (..)
   , EncoderState (..)
-  , FlacEncoderException (..)
+  , EncoderException (..)
   , AudioInfo (..)
   , AudioFormat (..) )
 where
@@ -47,7 +47,7 @@ data EncoderInitStatus
     -- supports 4-32 bps but the reference encoder currently supports only
     -- up to 24 bps.
   | EncoderInitStatusInvalidSampleRate
-    -- ^ The encoder has an invalid setting for the input sample rate.
+    -- ^ The encoder has an invalid setting for the sample rate.
   | EncoderInitStatusInvalidBlockSize
     -- ^ The encoder has an invalid setting for the block size.
   | EncoderInitStatusInvalidMaxLpcOrder
@@ -92,17 +92,17 @@ data EncoderState
 
 -- | Exception that is thrown when encoding fails for some reason.
 
-data FlacEncoderException
-  = FlacEncoderInvalidSampleFormat SampleFormat
+data EncoderException
+  = EncoderInvalidSampleFormat SampleFormat
     -- ^ Input WAVE file had this sample format, which is not supported
     -- (usually happens with floating point samples right now).
-  | FlacEncoderInitFailed EncoderInitStatus
+  | EncoderInitFailed EncoderInitStatus
     -- ^ Encoder initialization failed.
-  | FlacEncoderFailed EncoderState
+  | EncoderFailed EncoderState
     -- ^ Encoder failed.
   deriving (Eq, Show, Read)
 
-instance Exception FlacEncoderException
+instance Exception EncoderException
 
 -- | An internal record holding parameters of input file.
 

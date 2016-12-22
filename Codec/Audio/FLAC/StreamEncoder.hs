@@ -25,6 +25,7 @@
 
 module Codec.Audio.FLAC.StreamEncoder
   ( EncoderSettings (..)
+  , EncoderException (..)
   , EncoderInitStatus (..)
   , EncoderState (..)
   , encodeFlac )
@@ -48,7 +49,7 @@ import System.IO
 -- its own as specified here
 -- <https://xiph.org/flac/api/group__flac__stream__encoder.html#gae49cf32f5256cb47eecd33779493ac85>.
 -- The parameters that it sets automatically are wrapped in 'Maybe's, so you
--- can choose to use the value that is set by 'encoderCompression'
+-- can choose whether to use the value that is set by 'encoderCompression'
 -- specifying 'Nothing' (default), or use something specific by passing a
 -- value inside 'Just'. Thorough understanding of the FLAC format is
 -- necessary to achieve good results, though.
@@ -63,20 +64,57 @@ data EncoderSettings = EncoderSettings
   , encoderDoMidSideStereo :: !(Maybe Bool)
     -- ^ Enable mid-side encoding on stereo input. The number of channels
     -- must be 2 for this to have any effect. Default value: 'Nothing'.
-  }
+  , encoderLooseMidSideStereo :: !(Maybe Bool)
+    -- ^ Set to 'True' to enable adaptive switching between mid-side and
+    -- left-right encoding on stereo input. Set to 'False' to use exhaustive
+    -- searching. Setting this to 'True' requires 'encoderDoMidSideStereo'
+    -- to also be set to 'True' in order to have any effect. Default value:
+    -- 'Nothing'.
+  , encoderMaxLpcOrder :: !(Maybe Word32)
+    -- ^ Set maximum LPC order, or 0 to use the fixed predictors. Default
+    -- value: 'Nothing'.
+  , encoderQlpCoeffPrecision :: !(Maybe Word32)
+    -- ^ Set the precision in bits of the quantized linear predictor
+    -- coefficients, or 0 to let the encoder select it based on the
+    -- blocksize. Default value: 'Nothing'.
+  , encoderDoQlpCoeffPrecisionSearch :: !(Maybe Bool)
+    -- ^ Set to 'False' to use only the specified quantized linear predictor
+    -- coefficient precision, or 'True' to search neighboring precision
+    -- values and use the best one. Default value: 'Nothing'.
+  , encoderDoExhaustiveModelSearch :: !(Maybe Bool)
+    -- ^ Set to 'False' to let the encoder estimate the best model order
+    -- based on the residual signal energy, or 'True' to force the encoder
+    -- to evaluate all order models and select the best. Default value:
+    -- 'Nothing'.
+  , encoderResidualPartitionOrders :: !(Maybe (Word32, Word32))
+    -- ^ Set the minimum and maximum partition order to search when coding
+    -- the residual. The partition order determines the context size in the
+    -- residual. The context size will be approximately @blocksize / (2 ^
+    -- order)@. Set both min and max values to 0 to force a single context,
+    -- whose Rice parameter is based on the residual signal variance.
+    -- Otherwise, set a min and max order, and the encoder will search all
+    -- orders, using the mean of each context for its Rice parameter, and
+    -- use the best. Default: 'Nothing'.
+  } deriving (Show, Read, Eq, Ord)
 
 instance Default EncoderSettings where
   def = EncoderSettings
-    { encoderCompression     = 5
-    , encoderBlockSize       = 0
-    , encoderVerify          = False
-    , encoderDoMidSideStereo = Nothing }
+    { encoderCompression               = 5
+    , encoderBlockSize                 = 0
+    , encoderVerify                    = False
+    , encoderDoMidSideStereo           = Nothing
+    , encoderLooseMidSideStereo        = Nothing
+    , encoderMaxLpcOrder               = Nothing
+    , encoderQlpCoeffPrecision         = Nothing
+    , encoderDoQlpCoeffPrecisionSearch = Nothing
+    , encoderDoExhaustiveModelSearch   = Nothing
+    , encoderResidualPartitionOrders   = Nothing }
 
 -- | Encode a WAVE file or RF64 file to native FLAC.
 --
 -- If the input file is not a valid WAVE file, 'WaveException' will be
--- thrown. 'FlacEncoderException' is thrown when underlying FLAC encoder
--- reports a problem.
+-- thrown. 'EncoderException' is thrown when underlying FLAC encoder reports
+-- a problem.
 --
 -- Please note that there are a number of limitations on parameters of input
 -- audio stream (imposed by current reference FLAC implementation):
@@ -97,7 +135,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   wave  <- readWaveFile ipath
   case waveSampleFormat wave of
     SampleFormatPcmInt _ -> return ()
-    fmt -> throwIO (FlacEncoderInvalidSampleFormat fmt)
+    fmt -> throwIO (EncoderInvalidSampleFormat fmt)
   let channels      = fromIntegral (waveChannels wave)
       bitsPerSample = fromIntegral (waveBitsPerSample wave)
       sampleRate    = waveSampleRate wave
@@ -107,8 +145,22 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   liftInit (encoderSetCompression   e encoderCompression)
   liftInit (encoderSetBlockSize     e encoderBlockSize)
   liftInit (encoderSetVerify        e encoderVerify)
-  forM_ encoderDoMidSideStereo (liftInit . encoderSetVerify e)
-  -- TODO add more parameters here later
+  forM_ encoderDoMidSideStereo
+    (liftInit . encoderSetDoMidSideStereo e)
+  forM_ encoderLooseMidSideStereo
+    (liftInit . encoderSetLooseMidSideStereo e)
+  forM_ encoderMaxLpcOrder
+    (liftInit . encoderSetMaxLpcOrder e)
+  forM_ encoderQlpCoeffPrecision
+    (liftInit . encoderSetQlpCoeffPrecision e)
+  forM_ encoderDoQlpCoeffPrecisionSearch
+    (liftInit . encoderSetDoQlpCoeffPrecisionSearch e)
+  forM_ encoderDoExhaustiveModelSearch
+    (liftInit . encoderSetDoExhaustiveModelSearch e)
+  forM_ encoderResidualPartitionOrders
+    (liftInit . encoderSetMinResidualPartitionOrder e . fst)
+  forM_ encoderResidualPartitionOrders
+    (liftInit . encoderSetMaxResidualPartitionOrder e . snd)
   let acquire = openBinaryTempFile odir ofile
       cleanup = removeFile . fst
       odir    = takeDirectory opath
@@ -118,7 +170,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
     initStatus <- encoderInitFile e otemp
     case initStatus of
       EncoderInitStatusOK -> return ()
-      status -> throwIO (FlacEncoderInitFailed status)
+      status -> throwIO (EncoderInitFailed status)
     liftBool e $ encoderProcessHelper e
       (fromIntegral $ waveDataOffset wave)
       (waveDataSize wave)
@@ -136,7 +188,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
 liftInit :: IO Bool -> IO ()
 liftInit m = liftIO m >>= bool t (return ())
   where
-    t = throwIO (FlacEncoderInitFailed EncoderInitStatusAlreadyInitialized)
+    t = throwIO (EncoderInitFailed EncoderInitStatusAlreadyInitialized)
 
 -- | Execute an action that returns 'False' on failure into taking care of
 -- error reporting. In case of trouble @'EncoderFailed'@ with encoder status
@@ -148,4 +200,4 @@ liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 -- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
 
 throwState :: Encoder -> IO a
-throwState = encoderGetState >=> throwIO . FlacEncoderFailed
+throwState = encoderGetState >=> throwIO . EncoderFailed
