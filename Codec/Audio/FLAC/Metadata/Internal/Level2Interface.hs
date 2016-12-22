@@ -46,13 +46,13 @@ import Prelude hiding (iterate)
 -- to be freed even in case of exception.
 --
 -- If memory for the chain cannot be allocated, corresponding
--- 'FlacMetaException' is raised.
+-- 'MetaException' is raised.
 
 withChain :: (MetaChain -> IO a) -> IO a
 withChain f = bracket chainNew (mapM_ chainDelete) $ \mchain ->
   case mchain of
     Nothing -> throwM
-      (FlacMetaGeneralProblem MetaChainStatusMemoryAllocationError)
+      (MetaGeneralProblem MetaChainStatusMemoryAllocationError)
     Just x -> f x
 
 -- | Create a new 'MetaChain'. In the case of memory allocation problem
@@ -128,7 +128,7 @@ foreign import ccall unsafe "FLAC__metadata_chain_sort_padding"
 -- and traversing metadata blocks always correct and safe.
 --
 -- If memory for the iterator cannot be allocated, corresponding
--- 'FlacMetaException' is raised.
+-- 'MetaException' is raised.
 
 withIterator :: (MonadMask m, MonadIO m)
   => MetaChain         -- ^ Metadata chain to traverse
@@ -141,7 +141,7 @@ withIterator chain f = bracket acquire release action
     action mi =
       case mi of
         Nothing -> throwM
-          (FlacMetaGeneralProblem MetaChainStatusMemoryAllocationError)
+          (MetaGeneralProblem MetaChainStatusMemoryAllocationError)
         Just i -> do
           liftIO (iteratorInit i chain)
           let go thisNext =

@@ -157,7 +157,7 @@ spec = around withSandbox $ do
     it "raises exception when invalid seek table given" $ \path -> do
       let m = runFlacMeta def path $
             SeekTable =-> Just invalidSeekTable
-      m `shouldThrow` (== FlacMetaInvalidSeekTable)
+      m `shouldThrow` (== MetaInvalidSeekTable)
     it "is set/read/deleted correctly" $ \path -> do
       -- Can set seek table if it's correct.
       runFlacMeta def path $ do
@@ -175,7 +175,7 @@ spec = around withSandbox $ do
         isMetaChainModified `shouldReturn` True
     context "when auto-vacuum disabled" $
       it "can write empty seek table" $ \path -> do
-        runFlacMeta def { flacMetaAutoVacuum = False } path $ do
+        runFlacMeta def { metaAutoVacuum = False } path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain `shouldReturn` StreamInfoBlock :|
@@ -185,7 +185,7 @@ spec = around withSandbox $ do
           retrieve SeekTable `shouldReturn` Just V.empty
     context "when auto-vacuum enabled" $
       it "empty seek table is removed automatically" $ \path -> do
-        runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+        runFlacMeta def { metaAutoVacuum = True } path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain `shouldReturn` StreamInfoBlock :|
@@ -208,7 +208,7 @@ spec = around withSandbox $ do
         retrieve VorbisVendor `shouldReturn` Just "foo"
     context "when auto-vacuum disabled" $
       it "deletion just sets the field to empty string" $ \path -> do
-        runFlacMeta def { flacMetaAutoVacuum = False } path $ do
+        runFlacMeta def { metaAutoVacuum = False } path $ do
           VorbisVendor =-> Nothing
           retrieve VorbisVendor `shouldReturn` Just ""
           getMetaChain `shouldReturn` StreamInfoBlock :|
@@ -219,7 +219,7 @@ spec = around withSandbox $ do
     context "when auto-vacuum enabled" $ do
       context "when no other vorbis fields set" $
         it "empty vendor causes removal of vorbis vendor block" $ \path -> do
-          runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+          runFlacMeta def { metaAutoVacuum = True } path $ do
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
             getMetaChain `shouldReturn` StreamInfoBlock :|
@@ -230,7 +230,7 @@ spec = around withSandbox $ do
             getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
       context "when other vorbis fields exist" $
         it "deletion just sets the field to empty string" $ \path -> do
-          runFlacMeta def { flacMetaAutoVacuum = True } path $ do
+          runFlacMeta def { metaAutoVacuum = True } path $ do
             VorbisComment Title =-> Just "bobla"
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
@@ -267,7 +267,7 @@ spec = around withSandbox $ do
       let m = runFlacMeta def path $
             Picture ptype =-> Just invalidPicture
           mimeTypeError = "MIME type string must contain only printable ASCII characters (0x20-0x7e)"
-      m `shouldThrow` (== FlacMetaInvalidPicture mimeTypeError)
+      m `shouldThrow` (== MetaInvalidPicture mimeTypeError)
     it (show ptype ++ " is set/read/deleted correctly") $ \path -> do
       -- Can set a picture.
       runFlacMeta def path $ do
@@ -351,7 +351,7 @@ shouldReturn m y = m >>= (`shouldBe` y)
 -- | Type constrained version of 'Flac.runFlacMeta' to remove type
 -- ambiguity.
 
-runFlacMeta :: FlacMetaSettings -> FilePath -> FlacMeta a -> IO a
+runFlacMeta :: MetaSettings -> FilePath -> FlacMeta a -> IO a
 runFlacMeta = Flac.runFlacMeta
 
 -- | Make a temporary copy of @audio-samples/sample.flac@ file and provide

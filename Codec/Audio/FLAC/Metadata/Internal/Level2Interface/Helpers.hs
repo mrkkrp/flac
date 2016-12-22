@@ -238,7 +238,7 @@ setSeekPoints block seekPoints = do
               else do
                 legal <- objectSeektableIsLegal block
                 unless legal $
-                  throwM FlacMetaInvalidSeekTable
+                  throwM MetaInvalidSeekTable
       in go 0 >> return True
     else return False
 
@@ -390,7 +390,7 @@ setPictureData block PictureData {..} = do
      res <- objectPictureIsLegal block
      case res of
        Nothing  -> return ()
-       Just msg -> throwM (FlacMetaInvalidPicture msg)
+       Just msg -> throwM (MetaInvalidPicture msg)
   return goodOutcome
 
 foreign import ccall unsafe "FLAC__metadata_set_picture_width"

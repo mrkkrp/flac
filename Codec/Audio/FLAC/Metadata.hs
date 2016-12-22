@@ -76,8 +76,8 @@
 module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
     FlacMeta
-  , FlacMetaSettings (..)
-  , FlacMetaException (..)
+  , MetaSettings (..)
+  , MetaException (..)
   , MetaChainStatus (..)
   , runFlacMeta
     -- * Meta values
@@ -178,56 +178,56 @@ data Context = Context
 
 -- | Settings that control how metadata is written in FLAC file.
 
-data FlacMetaSettings = FlacMetaSettings
-  { flacMetaAutoVacuum :: !Bool
+data MetaSettings = MetaSettings
+  { metaAutoVacuum :: !Bool
     -- ^ Whether to traverse all metadata blocks just before padding sorting
-    -- (if enabled, see 'flacMetaSortPadding') and writing data to file,
+    -- (if enabled, see 'metaSortPadding') and writing data to file,
     -- deleting all metadata blocks that appear to be empty, e.g. vorbis
     -- comment block without any comments (tags) in it. Default value:
     -- 'True'.
-  , flacMetaSortPadding :: !Bool
+  , metaSortPadding :: !Bool
     -- ^ Whether to attempt to sort and consolidate all padding at the end
     -- of metadata section. The main purpose of this is that the padding can
     -- be truncated if necessary to get more space so we can overwrite
     -- metadata blocks in place instead of overwriting the entire FLAC file.
     -- Default value: 'True'.
-  , flacMetaUsePadding :: !Bool
+  , metaUsePadding :: !Bool
     -- ^ This setting enables truncation of last padding metadata block if
     -- it allows to overwrite metadata in place instead of overwriting the
     -- entire file. Default value: 'True'.
-  , flacMetaPreserveFileStats :: !Bool
+  , metaPreserveFileStats :: !Bool
     -- ^ If 'True', the owner and modification time will be preserved even
     -- if new FLAC file is written (this is for the cases when we need to
     -- write entire FLAC file and thus a copy of the file is written).
     -- Default value: 'True'.
   } deriving (Show, Read, Eq, Ord)
 
-instance Default FlacMetaSettings where
-  def = FlacMetaSettings
-    { flacMetaAutoVacuum        = True
-    , flacMetaSortPadding       = True
-    , flacMetaUsePadding        = True
-    , flacMetaPreserveFileStats = True }
+instance Default MetaSettings where
+  def = MetaSettings
+    { metaAutoVacuum        = True
+    , metaSortPadding       = True
+    , metaUsePadding        = True
+    , metaPreserveFileStats = True }
 
--- | Run an action that manipulates FLAC metadata. 'FlacMetaSettings'
--- control subtle and rather low-level details of metadata editing, just
--- pass 'def' unless you know what you are doing. 'FilePath' specifies
--- location of FLAC file to read\/edit in the file system. 'FlacMeta' is a
--- monadic action that describes what to do with metadata. Compose it from
--- 'retrieve' and @('=->')@.
+-- | Run an action that manipulates FLAC metadata. 'MetaSettings' control
+-- subtle and rather low-level details of metadata editing, just pass 'def'
+-- unless you know what you are doing. 'FilePath' specifies location of FLAC
+-- file to read\/edit in the file system. 'FlacMeta' is a monadic action
+-- that describes what to do with metadata. Compose it from 'retrieve' and
+-- @('=->')@.
 --
 -- The action will throw 'Data.Text.Encoding.Error.UnicodeException' if text
 -- data like Vorbis Comment entries cannot be read as UTF-8-encoded value.
 --
--- If a problem occurs, 'FlacMetaException' is thrown with attached
+-- If a problem occurs, 'MetaException' is thrown with attached
 -- 'MetaChainStatus' that should help investigating what went wrong.
 
 runFlacMeta :: MonadIO m
-  => FlacMetaSettings  -- ^ Settings to use
+  => MetaSettings      -- ^ Settings to use
   -> FilePath          -- ^ File to operate on
   -> FlacMeta a        -- ^ Actions to perform
   -> m a               -- ^ The result
-runFlacMeta FlacMetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
+runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
   metaModified <- newIORef False
   metaFileSize <- withFile path ReadMode hFileSize
   flip runReaderT Context {..} $ do
@@ -235,11 +235,11 @@ runFlacMeta FlacMetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
     result   <- unFlacMeta m
     modified <- liftIO (readIORef metaModified)
     when modified $ do
-      when flacMetaAutoVacuum applyVacuum
-      when flacMetaSortPadding $
+      when metaAutoVacuum applyVacuum
+      when metaSortPadding $
         liftIO (chainSortPadding metaChain)
       liftBool
-        (chainWrite metaChain flacMetaUsePadding flacMetaPreserveFileStats)
+        (chainWrite metaChain metaUsePadding metaPreserveFileStats)
     return result
 
 ----------------------------------------------------------------------------
@@ -489,8 +489,8 @@ instance MetaValue Application where
 
 -- | Seek table as a 'Vector' of 'SeekPoint's. Seek points within a table
 -- must be sorted in ascending order by sample number. If you try to write
--- an invalid seek table, 'FlacMetaException' will be raised with
--- 'FlacMetaInvalidSeekTable' constructor.
+-- an invalid seek table, 'MetaException' will be raised using
+-- 'MetaInvalidSeekTable' constructor.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' ('Vector'
 -- 'SeekPoint')@.
@@ -517,7 +517,7 @@ instance MetaValue SeekTable where
 -- present, the “vendor” entry is always in there, so when you delete it (by
 -- @'VorbisVendor' '=->' 'Nothing'@), you really set it to an empty string
 -- (which is enough to trigger auto vacuum feature if no other entries are
--- detected, see 'flacMetaAutoVacuum').
+-- detected, see 'metaAutoVacuum').
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
 
@@ -621,8 +621,8 @@ instance MetaValue VorbisComment where
 
 -- | Picture embedded in FLAC file. A FLAC file can have several pictures
 -- attached to it, you choose which one you want by specifying
--- 'PictureType'. If you try to write an invalid picture 'FlacMetaException'
--- will be raised with 'FlacMetaInvalidPicture' constructor which includes a
+-- 'PictureType'. If you try to write an invalid picture 'MetaException'
+-- will be raised with 'MetaInvalidPicture' constructor which includes a
 -- 'Text' value with explanation why the picture was considered invalid.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
@@ -876,7 +876,7 @@ throwStatus :: Inner a
 throwStatus = do
   chain  <- asks metaChain
   status <- liftIO (chainStatus chain)
-  throwM (FlacMetaGeneralProblem status)
+  throwM (MetaGeneralProblem status)
 
 -- | Specify that the metadata chain has been modified.
 

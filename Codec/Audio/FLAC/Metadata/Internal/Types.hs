@@ -15,7 +15,7 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , Metadata (..)
   , MetadataType (..)
   , MetaChainStatus (..)
-  , FlacMetaException (..)
+  , MetaException (..)
   , ApplicationId
   , mkApplicationId
   , unApplicationId
@@ -105,17 +105,17 @@ data MetaChainStatus
 -- | Exception that is thrown when manipulation of FLAC metadata fails for
 -- some reason.
 
-data FlacMetaException
-  = FlacMetaGeneralProblem MetaChainStatus
+data MetaException
+  = MetaGeneralProblem MetaChainStatus
     -- ^ General failure, see the attached 'MetaChainStatus'
-  | FlacMetaInvalidSeekTable
+  | MetaInvalidSeekTable
     -- ^ Invalid seek table was passed to be written
-  | FlacMetaInvalidPicture Text
+  | MetaInvalidPicture Text
     -- ^ Invalid picture data was passed to be written. The reason why the
     -- data was invalid is attached.
   deriving (Eq, Show, Read)
 
-instance Exception FlacMetaException
+instance Exception MetaException
 
 -- | A normalizing wrapper around 'ByteString' that makes sure that the
 -- 'ByteString' inside is a valid FLAC application name. You can create
