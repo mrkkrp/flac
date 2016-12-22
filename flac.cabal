@@ -93,9 +93,9 @@ library
                     , cbits/stream_encoder_helpers.c
   include-dirs:       cbits
   if flag(dev)
-    ghc-options:      -Wall -Werror
+    ghc-options:      -Wall -Werror -fsimpl-tick-factor=150
   else
-    ghc-options:      -O2 -Wall
+    ghc-options:      -O2 -Wall -fsimpl-tick-factor=150
   default-language:   Haskell2010
 
 test-suite tests
