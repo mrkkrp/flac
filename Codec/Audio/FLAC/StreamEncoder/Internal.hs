@@ -29,6 +29,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
   , encoderSetDoExhaustiveModelSearch
   , encoderSetMinResidualPartitionOrder
   , encoderSetMaxResidualPartitionOrder
+  , encoderSetTotalSamplesEstimate
   , encoderSetVerify
   , encoderGetState
   , encoderInitFile
@@ -209,6 +210,18 @@ encoderSetMaxResidualPartitionOrder encoder value =
 
 foreign import ccall unsafe "FLAC__stream_encoder_set_max_residual_partition_order"
   c_encoder_set_max_residual_partition_order :: Encoder -> CUInt -> IO Bool
+
+-- | Set an estimate of the total samples that will be encoded. This is
+-- merely an estimate and may be set to 0 if unknown. This value will be
+-- written to the STREAMINFO block before encoding, and can remove the need
+-- for the caller to rewrite the value later if the value is known before
+-- encoding.
+
+encoderSetTotalSamplesEstimate :: Encoder -> Word64 -> IO Bool
+encoderSetTotalSamplesEstimate = c_encoder_set_total_samples_estimate
+
+foreign import ccall unsafe "FLAC__stream_encoder_set_total_samples_estimate"
+  c_encoder_set_total_samples_estimate :: Encoder -> Word64 -> IO Bool
 
 -- | Set the “verify” flag. If true, the encoder will verify it's own
 -- encoded output by feeding it through an internal decoder and comparing

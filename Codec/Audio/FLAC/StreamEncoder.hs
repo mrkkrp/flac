@@ -145,6 +145,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   let channels      = fromIntegral (waveChannels wave)
       bitsPerSample = fromIntegral (waveBitsPerSample wave)
       sampleRate    = waveSampleRate wave
+      totalSamples  = waveSamplesTotal wave
   liftInit (encoderSetChannels      e channels)
   liftInit (encoderSetBitsPerSample e bitsPerSample)
   liftInit (encoderSetSampleRate    e sampleRate)
@@ -169,6 +170,9 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
     (liftInit . encoderSetMinResidualPartitionOrder e . fst)
   forM_ encoderResidualPartitionOrders
     (liftInit . encoderSetMaxResidualPartitionOrder e . snd)
+  -- Set the estimate (which is likely correct!), to avoid rewrite of
+  -- STREAMINFO metadata block after encoding.
+  liftInit (encoderSetTotalSamplesEstimate e totalSamples)
   let acquire = openBinaryTempFile odir ofile
       cleanup = removeFile . fst
       odir    = takeDirectory opath
