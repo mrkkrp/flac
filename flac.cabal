@@ -75,6 +75,7 @@ library
   exposed-modules:    Codec.Audio.FLAC.Metadata
                     , Codec.Audio.FLAC.StreamDecoder
                     , Codec.Audio.FLAC.StreamEncoder
+                    , Codec.Audio.FLAC.StreamEncoder.Apodization
   other-modules:      Codec.Audio.FLAC.Metadata.Internal.Level2Interface
                     , Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
                     , Codec.Audio.FLAC.Metadata.Internal.Object

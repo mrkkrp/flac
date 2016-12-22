@@ -39,6 +39,7 @@ import Control.Exception
 import Control.Monad.Except
 import Data.Bool (bool)
 import Data.Default.Class
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word
 import System.Directory
 import System.FilePath
@@ -70,6 +71,10 @@ data EncoderSettings = EncoderSettings
     -- searching. Setting this to 'True' requires 'encoderDoMidSideStereo'
     -- to also be set to 'True' in order to have any effect. Default value:
     -- 'Nothing'.
+  , encoderApodization :: !(Maybe (NonEmpty ApodizationFunction))
+    -- ^ Sets the apodization function(s) the encoder will use when
+    -- windowing audio data for LPC analysis. Up to 32 functions are kept,
+    -- the rest are dropped. Default value: 'Nothing'.
   , encoderMaxLpcOrder :: !(Maybe Word32)
     -- ^ Set maximum LPC order, or 0 to use the fixed predictors. Default
     -- value: 'Nothing'.
@@ -104,6 +109,7 @@ instance Default EncoderSettings where
     , encoderVerify                    = False
     , encoderDoMidSideStereo           = Nothing
     , encoderLooseMidSideStereo        = Nothing
+    , encoderApodization               = Nothing
     , encoderMaxLpcOrder               = Nothing
     , encoderQlpCoeffPrecision         = Nothing
     , encoderDoQlpCoeffPrecisionSearch = Nothing
@@ -149,6 +155,8 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
     (liftInit . encoderSetDoMidSideStereo e)
   forM_ encoderLooseMidSideStereo
     (liftInit . encoderSetLooseMidSideStereo e)
+  forM_ encoderApodization
+    (liftInit . encoderSetApodization e . renderApodizationSpec)
   forM_ encoderMaxLpcOrder
     (liftInit . encoderSetMaxLpcOrder e)
   forM_ encoderQlpCoeffPrecision

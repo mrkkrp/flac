@@ -22,7 +22,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal
   , encoderSetBlockSize
   , encoderSetDoMidSideStereo
   , encoderSetLooseMidSideStereo
-    -- TODO encoderSetApodization
+  , encoderSetApodization
   , encoderSetMaxLpcOrder
   , encoderSetQlpCoeffPrecision
   , encoderSetDoQlpCoeffPrecisionSearch
@@ -38,10 +38,12 @@ where
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Codec.Audio.FLAC.Util
 import Control.Monad.Catch
+import Data.ByteString (ByteString)
 import Data.Void
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
+import qualified Data.ByteString as B
 
 -- | Create and use an 'Encoder'. The encoder is guaranteed to be freed even
 -- in case of exception.
@@ -140,6 +142,16 @@ encoderSetLooseMidSideStereo = c_encoder_set_loose_mid_side_stereo
 
 foreign import ccall unsafe "FLAC__stream_encoder_set_loose_mid_side_stereo"
   c_encoder_set_loose_mid_side_stereo :: Encoder -> Bool -> IO Bool
+
+-- | Set the apodization function(s) the encoder will use when windowing
+-- audio data for LPC analysis.
+
+encoderSetApodization :: Encoder -> ByteString -> IO Bool
+encoderSetApodization encoder specification =
+  B.useAsCString specification (c_encoder_set_apodization encoder)
+
+foreign import ccall unsafe "FLAC__stream_encoder_set_apodization"
+  c_encoder_set_apodization :: Encoder -> CString -> IO Bool
 
 -- | Set the maximum LPC order, or 0 to use only the fixed predictors.
 
