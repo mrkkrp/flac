@@ -12,11 +12,16 @@
 module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   ( Encoder (..)
   , EncoderInitStatus (..)
-  , EncoderState (..) )
+  , EncoderState (..)
+  , EncoderException (..)
+  , ApodizationFunction (..) )
 where
 
-import Foreign
+import Codec.Audio.Wave (SampleFormat)
+import Control.Exception
 import Data.Void
+import Foreign
+import Numeric.Natural
 
 -- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
 -- pointer to encoder instance.
@@ -42,7 +47,7 @@ data EncoderInitStatus
     -- supports 4-32 bps but the reference encoder currently supports only
     -- up to 24 bps.
   | EncoderInitStatusInvalidSampleRate
-    -- ^ The encoder has an invalid setting for the input sample rate.
+    -- ^ The encoder has an invalid setting for the sample rate.
   | EncoderInitStatusInvalidBlockSize
     -- ^ The encoder has an invalid setting for the block size.
   | EncoderInitStatusInvalidMaxLpcOrder
@@ -81,6 +86,58 @@ data EncoderState
     -- ^ An I\/O error occurred while opening\/reading\/writing a file.
   | EncoderStateFramingError
     -- ^ An error occurred while writing the stream.
-  | EnocderStateMemoryAllocationError
+  | EncoderStateMemoryAllocationError
     -- ^ Memory allocation failed.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
+
+-- | Exception that is thrown when encoding fails for some reason.
+
+data EncoderException
+  = EncoderInvalidSampleFormat SampleFormat
+    -- ^ Input WAVE file had this sample format, which is not supported
+    -- (usually happens with floating point samples right now).
+  | EncoderInitFailed EncoderInitStatus
+    -- ^ Encoder initialization failed.
+  | EncoderFailed EncoderState
+    -- ^ Encoder failed.
+  deriving (Eq, Show, Read)
+
+instance Exception EncoderException
+
+-- | Supported apodization functions.
+
+data ApodizationFunction
+  = Bartlett
+  | BartlettHann
+  | Blackman
+  | BlackmanHarris4Term92Db
+  | Connes
+  | Flattop
+  | Gauss Double
+    -- ^ The parameter is standard deviation @STDDEV@, @0 < STDDEV <= 0.5@.
+  | Hamming
+  | Hann
+  | KaiserBessel
+  | Nuttall
+  | Rectangle
+  | Triangle
+  | Tukey Double
+    -- ^ The parameter is the fraction of the window that is tapered @P@,
+    -- @0 <= P <= 1@. @P == 0@ corresponds to 'Rectangle' and @P = 1@
+    -- corresponds to 'Hann'.
+  | PartialTukey Natural (Maybe (Double, Maybe Double))
+    -- ^ The parameters are a series of small windows (all treated
+    -- separately). The three parameters are @n@, @ov@ and @P@. @n@ is the
+    -- number of functions to add, @ov@ is the overlap of the windows. @P@
+    -- is the fraction of the window that is tapered, like with a regular
+    -- tukey window. The function can be specified with only a number, a
+    -- number and an overlap, or a number, an overlap and a @P@. @ov@ should
+    -- be smaller than 1 and can be negative.
+  | PunchoutTukey Natural (Maybe (Double, Maybe Double))
+    -- ^ The parameters are a series of windows that have a hole in them. In
+    -- this way, the predictor is constructed with only a part of the block,
+    -- which helps in case a block consists of dissimilar parts. All said
+    -- about the parameters in the comment for 'PartialTukey' applies here,
+    -- with the exception that @ov@ is the overlap in the gaps in this case.
+  | Welch
+  deriving (Eq, Show, Read, Ord)
