@@ -13,9 +13,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   ( Encoder (..)
   , EncoderInitStatus (..)
   , EncoderState (..)
-  , EncoderException (..)
-  , AudioInfo (..)
-  , AudioFormat (..) )
+  , EncoderException (..) )
 where
 
 import Codec.Audio.Wave (SampleFormat)
@@ -103,22 +101,3 @@ data EncoderException
   deriving (Eq, Show, Read)
 
 instance Exception EncoderException
-
--- | An internal record holding parameters of input file.
-
-data AudioInfo = AudioInfo
-  { audioInfoFormat        :: !AudioFormat -- ^ Format of file
-  , audioInfoChannels      :: !Word32      -- ^ Number of channels
-  , audioInfoBitsPerSample :: !Word32      -- ^ Bits per sample
-  , audioInfoSampleRate    :: !Word32      -- ^ Sample rate
-  , audioInfoFileSize      :: !Integer     -- ^ File size
-  } deriving (Show, Read, Eq, Ord)
-
--- | An internal data type that represents all input file formats the
--- library can work with.
-
-data AudioFormat
-  = FormatWave
-  | FormatWave64
-  | FormatRF64
-  deriving (Show, Read, Eq, Ord, Bounded, Enum)
