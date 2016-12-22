@@ -94,7 +94,10 @@ encodeFlac
 encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
-  wave <- readWaveFile ipath
+  wave  <- readWaveFile ipath
+  case waveSampleFormat wave of
+    SampleFormatPcmInt _ -> return ()
+    fmt -> throwIO (FlacEncoderInvalidSampleFormat fmt)
   let channels      = fromIntegral (waveChannels wave)
       bitsPerSample = fromIntegral (waveBitsPerSample wave)
       sampleRate    = waveSampleRate wave

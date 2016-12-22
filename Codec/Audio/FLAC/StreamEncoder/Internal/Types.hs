@@ -18,6 +18,7 @@ module Codec.Audio.FLAC.StreamEncoder.Internal.Types
   , AudioFormat (..) )
 where
 
+import Codec.Audio.Wave (SampleFormat)
 import Control.Exception
 import Data.Void
 import Foreign
@@ -92,7 +93,10 @@ data EncoderState
 -- | Exception that is thrown when encoding fails for some reason.
 
 data FlacEncoderException
-  = FlacEncoderInitFailed EncoderInitStatus
+  = FlacEncoderInvalidSampleFormat SampleFormat
+    -- ^ Input WAVE file had this sample format, which is not supported
+    -- (usually happens with floating point samples right now).
+  | FlacEncoderInitFailed EncoderInitStatus
     -- ^ Encoder initialization failed.
   | FlacEncoderFailed EncoderState
     -- ^ Encoder failed.
