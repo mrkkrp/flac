@@ -135,6 +135,7 @@ import Data.Maybe (fromJust, listToMaybe)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Foreign hiding (void)
+import Numeric.Natural
 import Prelude hiding (iterate)
 import System.IO
 import qualified Data.ByteString.Char8 as B8
@@ -173,7 +174,7 @@ type Inner a = ReaderT Context IO a
 data Context = Context
   { metaChain    :: MetaChain     -- ^ Metadata chain
   , metaModified :: IORef Bool    -- ^ “Modified” flag
-  , metaFileSize :: Integer       -- ^ Size of target file
+  , metaFileSize :: Natural       -- ^ Size of target file
   }
 
 -- | Settings that control how metadata is written in FLAC file.
@@ -229,7 +230,7 @@ runFlacMeta :: MonadIO m
   -> m a               -- ^ The result
 runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
   metaModified <- newIORef False
-  metaFileSize <- withFile path ReadMode hFileSize
+  metaFileSize <- fromIntegral <$> withFile path ReadMode hFileSize
   flip runReaderT Context {..} $ do
     liftBool (chainRead metaChain path)
     result   <- unFlacMeta m
@@ -400,12 +401,12 @@ instance MetaValue TotalSamples where
 
 -- | File size in bytes.
 --
--- __Read-only__ attribute represented as an 'Integer'.
+-- __Read-only__ attribute represented as a 'Natural'.
 
 data FileSize = FileSize
 
 instance MetaValue FileSize where
-  type MetaType FileSize = Integer
+  type MetaType FileSize = Natural
 #if MIN_VERSION_base(4,9,0)
   type MetaWritable FileSize = TypeError NotWritable
 #endif
