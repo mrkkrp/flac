@@ -21,12 +21,14 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , unApplicationId
   , SeekPoint (..)
   , CueSheetData (..)
+  , CueSheetTrack (..)
   , PictureType (..)
   , PictureData (..) )
 where
 
 import Control.Exception (Exception)
 import Data.ByteString (ByteString)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid ((<>))
 import Data.String (IsString (..))
 import Data.Text (Text)
@@ -158,10 +160,60 @@ data SeekPoint = SeekPoint
     -- ^ The number of samples in the target frame
   } deriving (Eq, Ord, Show, Read)
 
--- | TODO
+-- | The data type represents CUE sheet as stored in FLAC metadata. This
+-- differs from traditional CUE sheets stored in “.cue” files (see
+-- <https://hackage.haskell.org/package/cue-sheet> to work with those).
 
 data CueSheetData = CueSheetData
-  {
+  { cueCatalog :: ByteString
+    -- ^ Media catalog number, in ASCII printable characters 0x20-0x7e. In
+    -- general, the media catalog number may be 0 to 128 bytes long; any
+    -- unused characters will be right-padded with NUL characters. For
+    -- CD-DA, this is a thirteen digit number.
+  , cueLeadIn :: Word64
+    -- ^ The number of lead-in samples. This field has meaning only for
+    -- CD-DA CUE sheets; for other uses it should be 0. For CD-DA, the
+    -- lead-in is the TRACK 00 area where the table of contents is stored;
+    -- more precisely, it is the number of samples from the first sample of
+    -- the media to the first sample of the first index point of the first
+    -- track. According to the Red Book, the lead-in must be silence and CD
+    -- grabbing software does not usually store it; additionally, the
+    -- lead-in must be at least two seconds but may be longer. For these
+    -- reasons the lead-in length is stored here so that the absolute
+    -- position of the first track can be computed. Note that the lead-in
+    -- stored here is the number of samples up to the first index point of
+    -- the first track, not necessarily to INDEX 01 of the first track; even
+    -- the first track may have INDEX 00 data.
+  , cueIsCd :: Bool
+    -- ^ 'True' if CUE sheet corresponds to a Compact Disc, else 'False'.
+  , cueTracks :: NonEmpty CueSheetTrack
+    -- ^ Collection of actual tracks in the CUE sheet, see 'CueSheetTrack'.
+  } deriving (Eq, Ord, Show, Read)
+
+-- | Data type representing a single track is CUE sheet.
+
+data CueSheetTrack = CueSheetTrack
+  { cueTrackOffset :: Word64
+    -- ^ Track offset in samples, relative to the beginning of the FLAC
+    -- audio stream. It is the offset to the first index point of the track.
+    -- (Note how this differs from CD-DA, where the track's offset in the
+    -- TOC is that of the track's INDEX 01 even if there is an INDEX 00.)
+    -- For CD-DA, the offset must be evenly divisible by 588 samples (588
+    -- samples = 44100 samples\/sec * 1\/75th of a sec).
+  , cueTrackIsrc :: Maybe ByteString
+    -- ^ Track ISRC, if present. This is a 12-digit alphanumeric code, the
+    -- @cue-sheet@ package has corresponding type with smart constructor and
+    -- validation, but for now we don't want to depend on that package.
+  , cueTrackAudio :: Bool
+    -- ^ 'True' for audio tracks, 'False' for non-audio tracks.
+  , cueTrackPreEmphasis :: Bool
+    -- ^ 'False' for no pre-emphasis, 'True' for pre-emphasis.
+  , cueTrackIndices :: NonEmpty Word64
+    -- ^ Track's index points. Offset in samples, relative to the track
+    -- offset, of the index point. For CD-DA, the offset must be evenly
+    -- divisible by 588 samples (588 samples = 44100 samples\/sec * 1\/75th
+    -- of a sec). Note that the offset is from the beginning of the track,
+    -- not the beginning of the audio data.
   } deriving (Eq, Ord, Show, Read)
 
 -- | Type of picture FLAC metadata can contain. There may be several

@@ -7,12 +7,13 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- This module exports the 'CueSheet' data type, which is rarely needed, and
--- thus should not “contaminate” the "Codec.Audio.Metadata" module with
--- potentially conflicting names.
+-- This module exports the 'CueSheetData' and 'CueSheetTrack' data types,
+-- which are rarely needed, and thus should not “contaminate” the
+-- "Codec.Audio.Metadata" module with potentially conflicting names.
 
 module Codec.Audio.FLAC.Metadata.CueSheet
-  ( CueSheetData (..) )
+  ( CueSheetData (..)
+  , CueSheetTrack (..) )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
