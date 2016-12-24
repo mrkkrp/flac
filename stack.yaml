@@ -1,5 +1,5 @@
-resolver: lts-7.7
+resolver: lts-7.14
 packages:
 - '.'
 extra-deps:
-- wave-0.1.0
+- wave-0.1.1
