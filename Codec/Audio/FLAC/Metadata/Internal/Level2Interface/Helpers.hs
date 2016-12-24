@@ -42,6 +42,9 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , setVorbisComment
   , deleteVorbisComment
   , isVorbisCommentEmpty
+    -- * CUE sheet
+  , getCueSheetData
+  , setCueSheetData
     -- * Picture
   , getPictureType
   , getPictureData
@@ -314,6 +317,20 @@ isVorbisCommentEmpty = c_is_vorbis_comment_empty
 
 foreign import ccall unsafe "FLAC__metadata_is_vorbis_comment_empty"
   c_is_vorbis_comment_empty :: Metadata -> IO Bool
+
+----------------------------------------------------------------------------
+-- CUE sheet
+
+-- | Get CUE sheet from 'Metadata' block assuming that it's a
+-- 'CueSheetBlock'.
+
+getCueSheetData :: Metadata -> IO CueSheetData
+getCueSheetData = undefined -- TODO
+
+-- | Set 'CueSheetData' in given 'Metadata' block of type 'CueSheetBlock'.
+
+setCueSheetData :: Metadata -> CueSheetData -> IO Bool
+setCueSheetData = undefined -- TODO
 
 ----------------------------------------------------------------------------
 -- Picture

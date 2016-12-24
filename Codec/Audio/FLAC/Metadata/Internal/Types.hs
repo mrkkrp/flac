@@ -20,6 +20,7 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , mkApplicationId
   , unApplicationId
   , SeekPoint (..)
+  , CueSheetData (..)
   , PictureType (..)
   , PictureData (..) )
 where
@@ -155,6 +156,12 @@ data SeekPoint = SeekPoint
     -- of the first frame
   , seekPointFrameSamples :: !Word32
     -- ^ The number of samples in the target frame
+  } deriving (Eq, Ord, Show, Read)
+
+-- | TODO
+
+data CueSheetData = CueSheetData
+  {
   } deriving (Eq, Ord, Show, Read)
 
 -- | Type of picture FLAC metadata can contain. There may be several

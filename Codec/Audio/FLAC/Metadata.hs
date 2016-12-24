@@ -620,6 +620,31 @@ instance MetaValue VorbisComment where
       liftBool (setVorbisComment (vorbisFieldName field) value block)
       setModified
 
+-- | A CUE sheet stored in FLAC metadata. If you try to write an invalid CUE
+-- sheet 'MetaException' will be raised with 'MetaInvalidCueSheet'
+-- constructor which includes a 'Text' value with explanation why the CUE
+-- sheet was considered invalid.
+--
+-- __Writable__ optional attribute represented as a @'Maybe' 'CueSheetData'@.
+
+data CueSheet = CueSheet
+
+instance MetaValue CueSheet where
+  type MetaType CueSheet = Maybe CueSheetData
+  type MetaWritable CueSheet = ()
+  retrieve CueSheet =
+    FlacMeta . withMetaBlock CueSheetBlock $
+      liftIO . (iteratorGetBlock >=> getCueSheetData)
+  CueSheet =-> Nothing =
+    void . FlacMeta . withMetaBlock CueSheetBlock $ \i -> do
+      liftBool (iteratorDeleteBlock i)
+      setModified
+  CueSheet =-> Just cueSheetData =
+    FlacMeta . withMetaBlock' CueSheetBlock $ \i -> do
+      block <- liftIO (iteratorGetBlock i)
+      liftBool (setCueSheetData block cueSheetData)
+      setModified
+
 -- | Picture embedded in FLAC file. A FLAC file can have several pictures
 -- attached to it, you choose which one you want by specifying
 -- 'PictureType'. If you try to write an invalid picture 'MetaException'
