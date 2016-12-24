@@ -113,6 +113,9 @@ data MetaException
     -- ^ General failure, see the attached 'MetaChainStatus'
   | MetaInvalidSeekTable
     -- ^ Invalid seek table was passed to be written
+  | MetaInvalidCueSheet Text
+    -- ^ Invalid CUE sheet was passed to be written. The reason why the data
+    -- was invalid is attached.
   | MetaInvalidPicture Text
     -- ^ Invalid picture data was passed to be written. The reason why the
     -- data was invalid is attached.
@@ -165,12 +168,12 @@ data SeekPoint = SeekPoint
 -- <https://hackage.haskell.org/package/cue-sheet> to work with those).
 
 data CueSheetData = CueSheetData
-  { cueCatalog :: ByteString
+  { cueCatalog :: !ByteString
     -- ^ Media catalog number, in ASCII printable characters 0x20-0x7e. In
     -- general, the media catalog number may be 0 to 128 bytes long; any
     -- unused characters will be right-padded with NUL characters. For
     -- CD-DA, this is a thirteen digit number.
-  , cueLeadIn :: Word64
+  , cueLeadIn :: !Word64
     -- ^ The number of lead-in samples. This field has meaning only for
     -- CD-DA CUE sheets; for other uses it should be 0. For CD-DA, the
     -- lead-in is the TRACK 00 area where the table of contents is stored;
@@ -184,31 +187,31 @@ data CueSheetData = CueSheetData
     -- stored here is the number of samples up to the first index point of
     -- the first track, not necessarily to INDEX 01 of the first track; even
     -- the first track may have INDEX 00 data.
-  , cueIsCd :: Bool
+  , cueIsCd :: !Bool
     -- ^ 'True' if CUE sheet corresponds to a Compact Disc, else 'False'.
-  , cueTracks :: NonEmpty CueSheetTrack
+  , cueTracks :: !(NonEmpty CueSheetTrack)
     -- ^ Collection of actual tracks in the CUE sheet, see 'CueSheetTrack'.
   } deriving (Eq, Ord, Show, Read)
 
 -- | Data type representing a single track is CUE sheet.
 
 data CueSheetTrack = CueSheetTrack
-  { cueTrackOffset :: Word64
+  { cueTrackOffset :: !Word64
     -- ^ Track offset in samples, relative to the beginning of the FLAC
     -- audio stream. It is the offset to the first index point of the track.
     -- (Note how this differs from CD-DA, where the track's offset in the
     -- TOC is that of the track's INDEX 01 even if there is an INDEX 00.)
     -- For CD-DA, the offset must be evenly divisible by 588 samples (588
     -- samples = 44100 samples\/sec * 1\/75th of a sec).
-  , cueTrackIsrc :: Maybe ByteString
+  , cueTrackIsrc :: !(Maybe ByteString)
     -- ^ Track ISRC, if present. This is a 12-digit alphanumeric code, the
     -- @cue-sheet@ package has corresponding type with smart constructor and
     -- validation, but for now we don't want to depend on that package.
-  , cueTrackAudio :: Bool
+  , cueTrackAudio :: !Bool
     -- ^ 'True' for audio tracks, 'False' for non-audio tracks.
-  , cueTrackPreEmphasis :: Bool
+  , cueTrackPreEmphasis :: !Bool
     -- ^ 'False' for no pre-emphasis, 'True' for pre-emphasis.
-  , cueTrackIndices :: NonEmpty Word64
+  , cueTrackIndices :: !(NonEmpty Word64)
     -- ^ Track's index points. Offset in samples, relative to the track
     -- offset, of the index point. For CD-DA, the offset must be evenly
     -- divisible by 588 samples (588 samples = 44100 samples\/sec * 1\/75th

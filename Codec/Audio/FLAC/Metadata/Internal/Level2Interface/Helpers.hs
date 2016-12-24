@@ -59,6 +59,7 @@ import Control.Monad
 import Control.Monad.Catch
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Vector (Vector, (!))
@@ -325,7 +326,64 @@ foreign import ccall unsafe "FLAC__metadata_is_vorbis_comment_empty"
 -- 'CueSheetBlock'.
 
 getCueSheetData :: Metadata -> IO CueSheetData
-getCueSheetData = undefined -- TODO
+getCueSheetData block = do
+  cueCatalog <- c_get_cue_sheet_mcn     block >>= B.packCString
+  cueLeadIn  <- c_get_cue_sheet_lead_in block
+  cueIsCd    <- c_get_cue_sheet_is_cd   block
+  numTracks  <- c_get_cue_sheet_num_tracks block
+  cueTracks <- if numTracks == 0
+    -- NOTE Should probably never happen unless FLAC file is invalid with
+    -- respect to the spec.
+    then throwM (MetaInvalidCueSheet "Cannot read CUE sheet without tracks")
+    else mapM (getCueSheetTrack block) (0 :| [1..numTracks - 1])
+  return CueSheetData {..}
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_mcn"
+  c_get_cue_sheet_mcn :: Metadata -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_lead_in"
+  c_get_cue_sheet_lead_in :: Metadata -> IO Word64
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_is_cd"
+  c_get_cue_sheet_is_cd :: Metadata -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_num_tracks"
+  c_get_cue_sheet_num_tracks :: Metadata -> IO Word8
+
+-- | Peek a single 'CueSheetTrack' at given index.
+
+getCueSheetTrack :: Metadata -> Word8 -> IO CueSheetTrack
+getCueSheetTrack block n = do
+  cueTrackOffset <- c_get_cue_sheet_track_offset block n
+  let f "" = Nothing
+      f bs = Just bs
+  cueTrackIsrc   <- c_get_cue_sheet_track_isrc   block n
+    >>= fmap f . B.packCString
+  cueTrackAudio  <- c_get_cue_sheet_track_audio  block n
+  cueTrackPreEmphasis <- c_get_cue_sheet_track_preemphasis block n
+  numIndices <- c_get_cue_sheet_track_num_indices block n
+  cueTrackIndices <- if numIndices == 0
+    then throwM (MetaInvalidCueSheet "Cannot read CUE track without indices")
+    else mapM (c_get_cue_sheet_track_index block n) (0 :| [1..numIndices - 1])
+  return CueSheetTrack {..}
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_offset"
+  c_get_cue_sheet_track_offset :: Metadata -> Word8 -> IO Word64
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_isrc"
+  c_get_cue_sheet_track_isrc :: Metadata -> Word8 -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_audio"
+  c_get_cue_sheet_track_audio :: Metadata -> Word8 -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_preemphasis"
+  c_get_cue_sheet_track_preemphasis :: Metadata -> Word8 -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_num_indices"
+  c_get_cue_sheet_track_num_indices :: Metadata -> Word8 -> IO Word8
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_index"
+  c_get_cue_sheet_track_index :: Metadata -> Word8 -> Word8 -> IO Word64
 
 -- | Set 'CueSheetData' in given 'Metadata' block of type 'CueSheetBlock'.
 

@@ -201,6 +201,64 @@ FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *block)
     (block->data.vorbis_comment.num_comments == 0);
 }
 
+/* CUE sheet */
+
+char *FLAC__metadata_get_cue_sheet_mcn(FLAC__StreamMetadata *block)
+{
+  return (block->data.cue_sheet.media_catalog_number);
+}
+
+FLAC__uint64 FLAC__metadata_get_cue_sheet_lead_in(FLAC__StreamMetadata *block)
+{
+  return (block->data.cue_sheet.lead_in);
+}
+
+FLAC__bool FLAC__metadata_get_cue_sheet_is_cd(FLAC__StreamMetadata *block)
+{
+  return (block->data.cue_sheet.is_cd);
+}
+
+FLAC__byte FLAC__metadata_get_cue_sheet_num_tracks(FLAC__StreamMetadata *block)
+{
+  return (block->data.cue_sheet.num_tracks);
+}
+
+FLAC__uint64 FLAC__metadata_get_cue_sheet_track_offset
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return (block->data.cue_sheet.tracks + n)->offset;
+}
+
+char *FLAC__metadata_get_cue_sheet_track_isrc
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return (block->data.cue_sheet.tracks + n)->isrc;
+}
+
+FLAC__bool FLAC__metadata_get_cue_sheet_track_audio
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return !(block->data.cue_sheet.tracks + n)->type;
+}
+
+FLAC__bool FLAC__metadata_get_cue_sheet_track_preemphasis
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return (block->data.cue_sheet.tracks + n)->pre_emphasis;
+}
+
+FLAC__byte FLAC__metadata_get_cue_sheet_track_num_indices
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return (block->data.cue_sheet.tracks + n)->num_indices;
+}
+
+FLAC__uint64 FLAC__metadata_get_cue_sheet_track_index
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte i)
+{
+  return ((block->data.cue_sheet.tracks + n)->indices + i)->offset;
+}
+
 /* Picture */
 
 FLAC__StreamMetadata_Picture_Type FLAC__metadata_get_picture_type
