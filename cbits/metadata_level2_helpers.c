@@ -259,6 +259,76 @@ FLAC__uint64 FLAC__metadata_get_cue_sheet_track_index
   return ((block->data.cue_sheet.tracks + n)->indices + i)->offset;
 }
 
+void FLAC__metadata_set_cue_sheet_mcn
+  (FLAC__StreamMetadata *block, char *source, unsigned length)
+{
+  unsigned i;
+  char *target = block->data.cue_sheet.media_catalog_number;
+  for (i = 0; i < 129; i++)
+    {
+      if (i < length)
+        *(target + i) = *(source + i);
+      else
+        *(target + i) = 0;
+    }
+}
+
+void FLAC__metadata_set_cue_sheet_lead_in
+  (FLAC__StreamMetadata *block, FLAC__uint64 lead_in)
+{
+  block->data.cue_sheet.lead_in = lead_in;
+}
+
+void FLAC__metadata_set_cue_sheet_is_cd
+  (FLAC__StreamMetadata *block, FLAC__bool is_cd)
+{
+  block->data.cue_sheet.is_cd = is_cd;
+}
+
+void FLAC__metadata_set_cue_sheet_track_offset
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__uint64 offset)
+{
+  (block->data.cue_sheet.tracks + n)->offset = offset;
+}
+
+void FLAC__metadata_set_cue_sheet_track_number
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  (block->data.cue_sheet.tracks + n)->number = n + 1;
+}
+
+void FLAC__metadata_set_cue_sheet_track_isrc
+  (FLAC__StreamMetadata *block, FLAC__byte n, char *source, unsigned length)
+{
+  unsigned i;
+  char *target = (block->data.cue_sheet.tracks + n)->isrc;
+  for (i = 0; i < 13; i++)
+    {
+      if (i < length)
+        *(target + i) = *(source + i);
+      else
+        *(target + i) = 0;
+    }
+}
+
+void FLAC__metadata_set_cue_sheet_track_audio
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__bool audio)
+{
+  (block->data.cue_sheet.tracks + n)->type = !audio;
+}
+
+void FLAC__metadata_set_cue_sheet_track_pre_emphasis
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__bool pre_emphasis)
+{
+  (block->data.cue_sheet.tracks + n)->pre_emphasis = pre_emphasis;
+}
+
+void FLAC__metadata_set_cue_sheet_track_index
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte i, FLAC__uint64 offset)
+{
+  ((block->data.cue_sheet.tracks + n)->indices + i)->offset = offset;
+}
+
 /* Picture */
 
 FLAC__StreamMetadata_Picture_Type FLAC__metadata_get_picture_type

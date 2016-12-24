@@ -21,7 +21,7 @@ module Codec.Audio.FLAC.Metadata.Internal.Types
   , unApplicationId
   , SeekPoint (..)
   , CueSheetData (..)
-  , CueSheetTrack (..)
+  , CueTrack (..)
   , PictureType (..)
   , PictureData (..) )
 where
@@ -189,13 +189,13 @@ data CueSheetData = CueSheetData
     -- the first track may have INDEX 00 data.
   , cueIsCd :: !Bool
     -- ^ 'True' if CUE sheet corresponds to a Compact Disc, else 'False'.
-  , cueTracks :: !(NonEmpty CueSheetTrack)
-    -- ^ Collection of actual tracks in the CUE sheet, see 'CueSheetTrack'.
+  , cueTracks :: !(NonEmpty CueTrack)
+    -- ^ Collection of actual tracks in the CUE sheet, see 'CueTrack'.
   } deriving (Eq, Ord, Show, Read)
 
 -- | Data type representing a single track is CUE sheet.
 
-data CueSheetTrack = CueSheetTrack
+data CueTrack = CueTrack
   { cueTrackOffset :: !Word64
     -- ^ Track offset in samples, relative to the beginning of the FLAC
     -- audio stream. It is the offset to the first index point of the track.
@@ -203,10 +203,11 @@ data CueSheetTrack = CueSheetTrack
     -- TOC is that of the track's INDEX 01 even if there is an INDEX 00.)
     -- For CD-DA, the offset must be evenly divisible by 588 samples (588
     -- samples = 44100 samples\/sec * 1\/75th of a sec).
-  , cueTrackIsrc :: !(Maybe ByteString)
-    -- ^ Track ISRC, if present. This is a 12-digit alphanumeric code, the
-    -- @cue-sheet@ package has corresponding type with smart constructor and
-    -- validation, but for now we don't want to depend on that package.
+  , cueTrackIsrc :: !ByteString
+    -- ^ Track ISRC, empty if not present. This is a 12-digit alphanumeric
+    -- code, the @cue-sheet@ package has corresponding type with smart
+    -- constructor and validation, but for now we don't want to depend on
+    -- that package.
   , cueTrackAudio :: !Bool
     -- ^ 'True' for audio tracks, 'False' for non-audio tracks.
   , cueTrackPreEmphasis :: !Bool

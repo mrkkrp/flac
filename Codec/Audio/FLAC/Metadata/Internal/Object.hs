@@ -18,6 +18,9 @@ module Codec.Audio.FLAC.Metadata.Internal.Object
   , objectDelete
   , objectSeektableResizePoints
   , objectSeektableIsLegal
+  , objectCueSheetResizeTracks
+  , objectCueSheetTrackResizeIndices
+  , objectCueSheetIsLegal
   , objectPictureSetMimeType
   , objectPictureSetDescription
   , objectPictureSetData
@@ -66,6 +69,42 @@ objectSeektableIsLegal = c_object_seektable_is_legal
 
 foreign import ccall unsafe "FLAC__metadata_object_seektable_is_legal"
   c_object_seektable_is_legal :: Metadata -> IO Bool
+
+-- | Resize the track array.
+
+objectCueSheetResizeTracks :: Metadata -> Word8 -> IO Bool
+objectCueSheetResizeTracks block n =
+  c_object_cuesheet_resize_tracks block (fromIntegral n)
+
+foreign import ccall unsafe "FLAC__metadata_object_cuesheet_resize_tracks"
+  c_object_cuesheet_resize_tracks :: Metadata -> CUInt -> IO Bool
+
+-- | Resize a track's index point array.
+
+objectCueSheetTrackResizeIndices :: Metadata -> Word8 -> Word8 -> IO Bool
+objectCueSheetTrackResizeIndices block n i =
+  c_object_cuesheet_track_resize_indices block (fromIntegral n) (fromIntegral i)
+
+foreign import ccall unsafe "FLAC__metadata_object_cuesheet_track_resize_indices"
+  c_object_cuesheet_track_resize_indices :: Metadata -> CUInt -> CUInt -> IO Bool
+
+-- | Check a CUE sheet to see if it conforms to the FLAC specification. If
+-- something is wrong, the explanation is return in 'Just', otherwise
+-- 'Nothing' is returned.
+
+objectCueSheetIsLegal :: Metadata -> IO (Maybe Text)
+objectCueSheetIsLegal block = alloca $ \cstrPtr -> do
+  -- NOTE The second Boolean argument of c_object_cuesheet_is_legal controls
+  -- whether to check against “more stringent requirements for a CD-DA
+  -- (audio) disc”. The checking should probably be controllable in some
+  -- way, but let's put 'True' here for now.
+  res <- c_object_cuesheet_is_legal block True cstrPtr
+  if res
+    then return Nothing
+    else Just <$> (peek cstrPtr >>= peekCStringText)
+
+foreign import ccall unsafe "FLAC__metadata_object_cuesheet_is_legal"
+  c_object_cuesheet_is_legal :: Metadata -> Bool -> Ptr CString -> IO Bool
 
 -- | Check a picture and return description of what is wrong, otherwise
 -- 'Nothing'.

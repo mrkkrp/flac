@@ -103,6 +103,7 @@ module Codec.Audio.FLAC.Metadata
   , VorbisVendor (..)
   , VorbisComment (..)
   , VorbisField (..)
+  , CueSheet (..)
   , Picture (..)
   , PictureType (..)
   , PictureData (..)
@@ -623,7 +624,8 @@ instance MetaValue VorbisComment where
 -- | A CUE sheet stored in FLAC metadata. If you try to write an invalid CUE
 -- sheet 'MetaException' will be raised with 'MetaInvalidCueSheet'
 -- constructor which includes a 'Text' value with explanation why the CUE
--- sheet was considered invalid.
+-- sheet was considered invalid. Import "Codec.Audio.FLAC.Metadata.CueSheet"
+-- to manipulate 'CueSheetData' and 'CueTrack's.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'CueSheetData'@.
 
