@@ -8,8 +8,9 @@
 -- Portability :  portable
 --
 -- This module exports the 'ApodizationFunction' data type, which is rarely
--- needed, and thus should not contaminate the
--- "Codec.Audio.FLAC.StreamEncoder".
+-- needed, and thus should not “contaminate” the
+-- "Codec.Audio.FLAC.StreamEncoder" module with potentially confilcting
+-- names.
 
 module Codec.Audio.FLAC.StreamEncoder.Apodization
   ( ApodizationFunction (..) )
