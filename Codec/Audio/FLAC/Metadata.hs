@@ -111,6 +111,7 @@ module Codec.Audio.FLAC.Metadata
   , wipeVorbisComment
   , wipeApplications
   , wipeSeekTable
+  , wipeCueSheets
   , wipePictures
     -- * Debugging and testing
   , MetadataType (..)
@@ -697,6 +698,14 @@ wipeApplications =
 wipeSeekTable :: FlacMeta ()
 wipeSeekTable =
   void . FlacMeta . withMetaBlock SeekTableBlock $ \i -> do
+    liftBool (iteratorDeleteBlock i)
+    setModified
+
+-- | Delete all “CUE sheet” metadata blocks.
+
+wipeCueSheets :: FlacMeta ()
+wipeCueSheets =
+  void . FlacMeta . withMetaBlock CueSheetBlock $ \i -> do
     liftBool (iteratorDeleteBlock i)
     setModified
 

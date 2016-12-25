@@ -253,6 +253,12 @@ FLAC__byte FLAC__metadata_get_cue_sheet_track_num_indices
   return (block->data.cue_sheet.tracks + n)->num_indices;
 }
 
+FLAC__bool FLAC__metadata_get_cue_sheet_track_has_pregap_index
+  (FLAC__StreamMetadata *block, FLAC__byte n)
+{
+  return ((block->data.cue_sheet.tracks + n)->indices + 0)-> number == 0;
+}
+
 FLAC__uint64 FLAC__metadata_get_cue_sheet_track_index
   (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte i)
 {
@@ -292,9 +298,9 @@ void FLAC__metadata_set_cue_sheet_track_offset
 }
 
 void FLAC__metadata_set_cue_sheet_track_number
-  (FLAC__StreamMetadata *block, FLAC__byte n)
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte n_)
 {
-  (block->data.cue_sheet.tracks + n)->number = n + 1;
+  (block->data.cue_sheet.tracks + n)->number = n_;
 }
 
 void FLAC__metadata_set_cue_sheet_track_isrc
@@ -324,9 +330,10 @@ void FLAC__metadata_set_cue_sheet_track_pre_emphasis
 }
 
 void FLAC__metadata_set_cue_sheet_track_index
-  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte i, FLAC__uint64 offset)
+  (FLAC__StreamMetadata *block, FLAC__byte n, FLAC__byte i, FLAC__byte i_, FLAC__uint64 offset)
 {
   ((block->data.cue_sheet.tracks + n)->indices + i)->offset = offset;
+  ((block->data.cue_sheet.tracks + n)->indices + i)->number = i_;
 }
 
 /* Picture */

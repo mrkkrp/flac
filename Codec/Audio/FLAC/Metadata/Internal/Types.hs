@@ -189,8 +189,10 @@ data CueSheetData = CueSheetData
     -- the first track may have INDEX 00 data.
   , cueIsCd :: !Bool
     -- ^ 'True' if CUE sheet corresponds to a Compact Disc, else 'False'.
-  , cueTracks :: !(NonEmpty CueTrack)
+  , cueTracks :: ![CueTrack]
     -- ^ Collection of actual tracks in the CUE sheet, see 'CueTrack'.
+  , cueLeadOutTrack :: !CueTrack
+    -- ^ The obligatory lead-out track, will be written with index 170.
   } deriving (Eq, Ord, Show, Read)
 
 -- | Data type representing a single track is CUE sheet.
@@ -212,6 +214,9 @@ data CueTrack = CueTrack
     -- ^ 'True' for audio tracks, 'False' for non-audio tracks.
   , cueTrackPreEmphasis :: !Bool
     -- ^ 'False' for no pre-emphasis, 'True' for pre-emphasis.
+  , cueTrackPregapIndex :: !(Maybe Word64)
+    -- ^ INDEX 00 (pregap) offset, see 'cueTrackIndices' for more info about
+    -- indices.
   , cueTrackIndices :: !(NonEmpty Word64)
     -- ^ Track's index points. Offset in samples, relative to the track
     -- offset, of the index point. For CD-DA, the offset must be evenly

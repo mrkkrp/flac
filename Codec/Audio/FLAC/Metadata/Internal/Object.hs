@@ -92,13 +92,9 @@ foreign import ccall unsafe "FLAC__metadata_object_cuesheet_track_resize_indices
 -- something is wrong, the explanation is return in 'Just', otherwise
 -- 'Nothing' is returned.
 
-objectCueSheetIsLegal :: Metadata -> IO (Maybe Text)
-objectCueSheetIsLegal block = alloca $ \cstrPtr -> do
-  -- NOTE The second Boolean argument of c_object_cuesheet_is_legal controls
-  -- whether to check against “more stringent requirements for a CD-DA
-  -- (audio) disc”. The checking should probably be controllable in some
-  -- way, but let's put 'True' here for now.
-  res <- c_object_cuesheet_is_legal block True cstrPtr
+objectCueSheetIsLegal :: Metadata -> Bool -> IO (Maybe Text)
+objectCueSheetIsLegal block checkCdda = alloca $ \cstrPtr -> do
+  res <- c_object_cuesheet_is_legal block checkCdda cstrPtr
   if res
     then return Nothing
     else Just <$> (peek cstrPtr >>= peekCStringText)
