@@ -654,6 +654,10 @@ instance MetaValue CueSheet where
 -- will be raised with 'MetaInvalidPicture' constructor which includes a
 -- 'Text' value with explanation why the picture was considered invalid.
 --
+-- Note that the @flac-picture@
+-- <https://hackage.haskell.org/package/flac-picture> package allows to work
+-- with 'PictureData' easier using the @Juicy-Pixels@ library.
+--
 -- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
 
 data Picture = Picture PictureType
