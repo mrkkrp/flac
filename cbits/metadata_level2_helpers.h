@@ -71,6 +71,32 @@ FLAC__bool FLAC__metadata_set_vorbis_comment(FLAC__StreamMetadata *, FLAC__byte 
 FLAC__bool FLAC__metadata_delete_vorbis_comment(FLAC__StreamMetadata *, const char *);
 FLAC__bool FLAC__metadata_is_vorbis_comment_empty(FLAC__StreamMetadata *);
 
+/* CUE sheet */
+
+char *FLAC__metadata_get_cue_sheet_mcn(FLAC__StreamMetadata *);
+FLAC__uint64 FLAC__metadata_get_cue_sheet_lead_in(FLAC__StreamMetadata *);
+FLAC__bool FLAC__metadata_get_cue_sheet_is_cd(FLAC__StreamMetadata *);
+FLAC__byte FLAC__metadata_get_cue_sheet_num_tracks(FLAC__StreamMetadata *);
+
+FLAC__uint64 FLAC__metadata_get_cue_sheet_track_offset(FLAC__StreamMetadata *, FLAC__byte);
+char *FLAC__metadata_get_cue_sheet_track_isrc(FLAC__StreamMetadata *, FLAC__byte);
+FLAC__bool FLAC__metadata_get_cue_sheet_track_audio(FLAC__StreamMetadata *, FLAC__byte);
+FLAC__bool FLAC__metadata_get_cue_sheet_track_preemphasis(FLAC__StreamMetadata *, FLAC__byte);
+FLAC__byte FLAC__metadata_get_cue_sheet_track_num_indices(FLAC__StreamMetadata *, FLAC__byte);
+FLAC__bool FLAC__metadata_get_cue_sheet_track_has_pregap_index(FLAC__StreamMetadata *, FLAC__byte);
+FLAC__uint64 FLAC__metadata_get_cue_sheet_track_index(FLAC__StreamMetadata *, FLAC__byte, FLAC__byte);
+
+void FLAC__metadata_set_cue_sheet_mcn(FLAC__StreamMetadata *, char *, unsigned);
+void FLAC__metadata_set_cue_sheet_lead_in(FLAC__StreamMetadata *, FLAC__uint64);
+void FLAC__metadata_set_cue_sheet_is_cd(FLAC__StreamMetadata *, FLAC__bool);
+
+void FLAC__metadata_set_cue_sheet_track_offset(FLAC__StreamMetadata *, FLAC__byte, FLAC__uint64);
+void FLAC__metadata_set_cue_sheet_track_number(FLAC__StreamMetadata *, FLAC__byte, FLAC__byte);
+void FLAC__metadata_set_cue_sheet_track_isrc(FLAC__StreamMetadata *, FLAC__byte, char *, unsigned);
+void FLAC__metadata_set_cue_sheet_track_audio(FLAC__StreamMetadata *, FLAC__byte, FLAC__bool);
+void FLAC__metadata_set_cue_sheet_track_pre_emphasis(FLAC__StreamMetadata *, FLAC__byte, FLAC__bool);
+void FLAC__metadata_set_cue_sheet_track_index(FLAC__StreamMetadata *, FLAC__byte, FLAC__byte, FLAC__byte, FLAC__uint64);
+
 /* Picture */
 
 FLAC__StreamMetadata_Picture_Type FLAC__metadata_get_picture_type(FLAC__StreamMetadata *);

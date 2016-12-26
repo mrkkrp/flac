@@ -74,7 +74,9 @@ data EncoderSettings = EncoderSettings
   , encoderApodization :: !(Maybe (NonEmpty ApodizationFunction))
     -- ^ Sets the apodization function(s) the encoder will use when
     -- windowing audio data for LPC analysis. Up to 32 functions are kept,
-    -- the rest are dropped. Default value: 'Nothing'.
+    -- the rest are dropped. Import
+    -- "Codec.Audio.FLAC.StreamEncoder.Apodization" to bring apodization
+    -- functions in scope. Default value: 'Nothing'.
   , encoderMaxLpcOrder :: !(Maybe Word32)
     -- ^ Set maximum LPC order, or 0 to use the fixed predictors. Default
     -- value: 'Nothing'.

@@ -73,6 +73,7 @@ library
     build-depends:    semigroups       == 0.18.*
   extra-libraries:    FLAC
   exposed-modules:    Codec.Audio.FLAC.Metadata
+                    , Codec.Audio.FLAC.Metadata.CueSheet
                     , Codec.Audio.FLAC.StreamDecoder
                     , Codec.Audio.FLAC.StreamEncoder
                     , Codec.Audio.FLAC.StreamEncoder.Apodization

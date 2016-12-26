@@ -15,6 +15,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE RecordWildCards          #-}
+{-# LANGUAGE TupleSections            #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   ( -- * Stream info
@@ -42,6 +43,9 @@ module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   , setVorbisComment
   , deleteVorbisComment
   , isVorbisCommentEmpty
+    -- * CUE sheet
+  , getCueSheetData
+  , setCueSheetData
     -- * Picture
   , getPictureType
   , getPictureData
@@ -56,6 +60,8 @@ import Control.Monad
 import Control.Monad.Catch
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
+import Data.List (uncons)
+import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Vector (Vector, (!))
@@ -64,6 +70,7 @@ import Foreign
 import Foreign.C.String
 import Foreign.C.Types
 import qualified Data.ByteString     as B
+import qualified Data.List.NonEmpty  as NE
 import qualified Data.Text           as T
 import qualified Data.Text.Encoding  as T
 import qualified Data.Text.Foreign   as T
@@ -314,6 +321,169 @@ isVorbisCommentEmpty = c_is_vorbis_comment_empty
 
 foreign import ccall unsafe "FLAC__metadata_is_vorbis_comment_empty"
   c_is_vorbis_comment_empty :: Metadata -> IO Bool
+
+----------------------------------------------------------------------------
+-- CUE sheet
+
+-- | Get CUE sheet from 'Metadata' block assuming that it's a
+-- 'CueSheetBlock'.
+
+getCueSheetData :: Metadata -> IO CueSheetData
+getCueSheetData block = do
+  cueCatalog <- c_get_cue_sheet_mcn     block >>= B.packCString
+  cueLeadIn  <- c_get_cue_sheet_lead_in block
+  cueIsCd    <- c_get_cue_sheet_is_cd   block
+  numTracks  <- c_get_cue_sheet_num_tracks block
+  (cueTracks, cueLeadOutTrack) <-
+    case numTracks of
+      0 ->
+        -- NOTE Should probably never happen unless FLAC file is invalid with
+        -- respect to the spec.
+        throwM (MetaInvalidCueSheet "Cannot read CUE sheet without tracks")
+      1 -> ([],) <$> getCueSheetTrack block 0
+      _ -> do
+        ts <- mapM (getCueSheetTrack block) [0..numTracks - 2]
+        t' <- getCueSheetTrack block (numTracks - 1)
+        return (ts,t')
+  return CueSheetData {..}
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_mcn"
+  c_get_cue_sheet_mcn :: Metadata -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_lead_in"
+  c_get_cue_sheet_lead_in :: Metadata -> IO Word64
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_is_cd"
+  c_get_cue_sheet_is_cd :: Metadata -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_num_tracks"
+  c_get_cue_sheet_num_tracks :: Metadata -> IO Word8
+
+-- | Peek a single 'CueSheetTrack' at given index.
+
+getCueSheetTrack :: Metadata -> Word8 -> IO CueTrack
+getCueSheetTrack block n = do
+  cueTrackOffset <- c_get_cue_sheet_track_offset block n
+  cueTrackIsrc   <- c_get_cue_sheet_track_isrc   block n >>= B.packCString
+  cueTrackAudio  <- c_get_cue_sheet_track_audio  block n
+  cueTrackPreEmphasis <- c_get_cue_sheet_track_preemphasis block n
+  numIndices     <- c_get_cue_sheet_track_num_indices block n
+  (cueTrackPregapIndex, cueTrackIndices) <- if numIndices == 0
+    then throwM (MetaInvalidCueSheet "Cannot read CUE track without indices")
+    else do
+      hasPregap <- c_get_cue_sheet_track_has_pregap_index block n
+      let pregapOne :: Num a => a
+          pregapOne = if hasPregap then 1 else 0
+          range     =
+            if numIndices > pregapOne
+              then [pregapOne..numIndices - 1]
+              else []
+      pregapIndex <- if hasPregap
+        then Just <$> c_get_cue_sheet_track_index block n 0
+        else return Nothing
+      trackIndices <- mapM (c_get_cue_sheet_track_index block n) (NE.fromList range)
+      return (pregapIndex, trackIndices)
+  return CueTrack {..}
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_offset"
+  c_get_cue_sheet_track_offset :: Metadata -> Word8 -> IO Word64
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_isrc"
+  c_get_cue_sheet_track_isrc :: Metadata -> Word8 -> IO CString
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_audio"
+  c_get_cue_sheet_track_audio :: Metadata -> Word8 -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_preemphasis"
+  c_get_cue_sheet_track_preemphasis :: Metadata -> Word8 -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_num_indices"
+  c_get_cue_sheet_track_num_indices :: Metadata -> Word8 -> IO Word8
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_has_pregap_index"
+  c_get_cue_sheet_track_has_pregap_index :: Metadata -> Word8 -> IO Bool
+
+foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_index"
+  c_get_cue_sheet_track_index :: Metadata -> Word8 -> Word8 -> IO Word64
+
+-- | Set 'CueSheetData' in given 'Metadata' block of type 'CueSheetBlock'.
+
+setCueSheetData :: Metadata -> CueSheetData -> IO Bool
+setCueSheetData block CueSheetData {..} = do
+  B.useAsCStringLen cueCatalog $ \(mcnPtr, mcnSize) ->
+    c_set_cue_sheet_mcn block mcnPtr (fromIntegral mcnSize)
+  c_set_cue_sheet_lead_in block cueLeadIn
+  c_set_cue_sheet_is_cd   block cueIsCd
+  let numTracks = fromIntegral (length cueTracks + 1)
+  res <- objectCueSheetResizeTracks block numTracks
+  goodOutcome <- if res
+    then
+      let go ts =
+            case uncons ts of
+              Nothing ->
+                setCueSheetTrack block cueLeadOutTrack (numTracks - 1) 170
+              Just ((t,n),ts') -> do
+                res' <- setCueSheetTrack block t n (n + 1)
+                if res'
+                  then go ts'
+                  else return False
+      in go (zip cueTracks [0..])
+    else return False
+  when goodOutcome $ do
+    res' <- objectCueSheetIsLegal block cueIsCd
+    case res' of
+      Nothing -> return ()
+      Just msg -> throwM (MetaInvalidCueSheet msg)
+  return goodOutcome
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_mcn"
+  c_set_cue_sheet_mcn :: Metadata -> CString -> CUInt -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_lead_in"
+  c_set_cue_sheet_lead_in :: Metadata -> Word64 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_is_cd"
+  c_set_cue_sheet_is_cd :: Metadata -> Bool -> IO ()
+
+-- | Poke a 'CueTrack' an specified index.
+
+setCueSheetTrack :: Metadata -> CueTrack -> Word8 -> Word8 -> IO Bool
+setCueSheetTrack block CueTrack {..} n n' = do
+  c_set_cue_sheet_track_offset block n cueTrackOffset
+  c_set_cue_sheet_track_number block n n'
+  B.useAsCStringLen cueTrackIsrc $ \(isrcPtr, isrcSize) ->
+    c_set_cue_sheet_track_isrc block n isrcPtr (fromIntegral isrcSize)
+  c_set_cue_sheet_track_audio block n cueTrackAudio
+  c_set_cue_sheet_track_pre_emphasis block n cueTrackPreEmphasis
+  let pregapOne :: Num a => a
+      pregapOne = if isJust cueTrackPregapIndex then 1 else 0
+      numIndices = fromIntegral (NE.length cueTrackIndices + pregapOne)
+  goodOutcome <- objectCueSheetTrackResizeIndices block n numIndices
+  when goodOutcome $ do
+    forM_ cueTrackPregapIndex $ \offset ->
+      c_set_cue_sheet_track_index block n 0 0 offset
+    let range = zip [pregapOne..] [1..]
+    forM_ (NE.zip cueTrackIndices (NE.fromList range)) $ \(offset, (i,i')) ->
+      c_set_cue_sheet_track_index block n i i' offset
+  return goodOutcome
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_offset"
+  c_set_cue_sheet_track_offset :: Metadata -> Word8 -> Word64 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_number"
+  c_set_cue_sheet_track_number :: Metadata -> Word8 -> Word8 -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_isrc"
+  c_set_cue_sheet_track_isrc :: Metadata -> Word8 -> CString -> CUInt -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_audio"
+  c_set_cue_sheet_track_audio :: Metadata -> Word8 -> Bool -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_pre_emphasis"
+  c_set_cue_sheet_track_pre_emphasis :: Metadata -> Word8 -> Bool -> IO ()
+
+foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_index"
+  c_set_cue_sheet_track_index :: Metadata -> Word8 -> Word8 -> Word8 -> Word64 -> IO ()
 
 ----------------------------------------------------------------------------
 -- Picture

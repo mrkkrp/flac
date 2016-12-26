@@ -37,6 +37,7 @@ module Codec.Audio.FLAC.MetadataSpec
 where
 
 import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
+import Codec.Audio.FLAC.Metadata.CueSheet
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
@@ -48,6 +49,7 @@ import System.IO.Temp (withSystemTempFile)
 import Test.Hspec hiding (shouldBe, shouldReturn)
 import qualified Codec.Audio.FLAC.Metadata as Flac
 import qualified Data.ByteString           as B
+import qualified Data.List.NonEmpty        as NE
 import qualified Data.Vector               as V
 import qualified Test.Hspec                as Hspec
 
@@ -173,6 +175,8 @@ spec = around withSandbox $ do
         SeekTable =-> Nothing
         getMetaChain `shouldReturn` refChain
         isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        SeekTable =-> Nothing
     context "when auto-vacuum disabled" $
       it "can write empty seek table" $ \path -> do
         runFlacMeta def { metaAutoVacuum = False } path $ do
@@ -262,6 +266,37 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         retrieve (VorbisComment vfield) `shouldReturn` Nothing
 
+  describe "CueSheet" $ do
+    context "when the CUE sheet is for a CD" $
+      it "raises exception when invalid CDDA CUE sheet is given" $ \path -> do
+        let m = runFlacMeta def path $
+              CueSheet =-> Just invalidCueSheet { cueIsCd = True }
+            leadInError = "CD-DA cue sheet must have a lead-in length of at least 2 seconds"
+        m `shouldThrow` (== MetaInvalidCueSheet leadInError)
+    context "when the CUE sheet is not for a CD" $
+      it "does not find anything bad in given CUE sheet" $ \path ->
+        -- NOTE All other possible issues have been taken care of by the
+        -- type system and carefully arranged data type definitions.
+        runFlacMeta def path $
+          CueSheet =-> Just invalidCueSheet { cueIsCd = False }
+    it "is set/read/deleted correctly" $ \path -> do
+      -- Can set CUE sheet if it's correct.
+      runFlacMeta def path $ do
+        CueSheet =-> Just testCueSheet
+        getMetaChain `shouldReturn` StreamInfoBlock :|
+          [CueSheetBlock,VorbisCommentBlock,PaddingBlock]
+        isMetaChainModified `shouldReturn` True
+      -- Can read it back.
+      runFlacMeta def path . checkNoMod $
+        retrieve CueSheet `shouldReturn` Just testCueSheet
+      -- Can delete it.
+      runFlacMeta def path $ do
+        CueSheet =-> Nothing
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        CueSheet =-> Nothing
+
   describe "Picture" . forM_ [minBound..maxBound] $ \ptype -> do
     it (show ptype ++ " raises exception on invalid picture") $ \path -> do
       let m = runFlacMeta def path $
@@ -316,6 +351,17 @@ spec = around withSandbox $ do
         SeekTable =-> Just testSeekTable
       runFlacMeta def path $ do
         wipeSeekTable
+        getMetaChain `shouldReturn` refChain
+        isMetaChainModified `shouldReturn` True
+      runFlacMeta def path . checkNoMod $
+        getMetaChain `shouldReturn` refChain
+
+  describe "wipeCueSheets" $
+    it "wipes all “CUE sheet” metadata blocks" $ \path -> do
+      runFlacMeta def path $
+        CueSheet =-> Just testCueSheet
+      runFlacMeta def path $ do
+        wipeCueSheets
         getMetaChain `shouldReturn` refChain
         isMetaChainModified `shouldReturn` True
       runFlacMeta def path . checkNoMod $
@@ -401,6 +447,73 @@ invalidSeekTable = V.fromList
   [ SeekPoint 0 0 100
   , SeekPoint 0 0 108
   , SeekPoint 0 0 101 ]
+
+-- | A correct CUE sheet.
+
+testCueSheet :: CueSheetData
+testCueSheet = CueSheetData
+  { cueCatalog = "1112223334445"
+  , cueLeadIn  = 88200 -- at least two seconds
+  , cueIsCd    = True
+  , cueTracks  =
+    [ CueTrack
+      { cueTrackOffset      = 588 * 2
+      , cueTrackIsrc        = "abcde1234567"
+      , cueTrackAudio       = True
+      , cueTrackPreEmphasis = True
+      , cueTrackPregapIndex = Nothing
+      , cueTrackIndices     = NE.fromList [0,588,588 * 2] }
+    , CueTrack
+      { cueTrackOffset      = 588 * 3
+      , cueTrackIsrc        = "abced1234576"
+      , cueTrackAudio       = False
+      , cueTrackPreEmphasis = False
+      , cueTrackPregapIndex = Just 588
+      , cueTrackIndices     = NE.fromList [0,588,588 * 7] }
+    ]
+  , cueLeadOutTrack =
+      CueTrack
+      { cueTrackOffset      = 588 * 10
+      , cueTrackIsrc        = ""
+      , cueTrackAudio       = True
+      , cueTrackPreEmphasis = False
+      , cueTrackPregapIndex = Just (588 * 9)
+      , cueTrackIndices     = NE.fromList [0] }
+  }
+
+-- | An invalid CUE sheet.
+
+invalidCueSheet :: CueSheetData
+invalidCueSheet =  CueSheetData
+  { cueCatalog = "1112223334445"
+  , cueLeadIn  = 1401 -- less than two seconds — illegal
+  , cueIsCd    = True
+  , cueTracks  =
+    [ CueTrack
+      { cueTrackOffset      = 1212
+      , cueTrackIsrc        = "abcde1234567"
+      , cueTrackAudio       = True
+      , cueTrackPreEmphasis = True
+      , cueTrackPregapIndex = Nothing
+      , cueTrackIndices     = NE.fromList [0,13,1096] }
+    , CueTrack
+      { cueTrackOffset      = 1313
+      , cueTrackIsrc        = "abced1234576"
+      , cueTrackAudio       = False
+      , cueTrackPreEmphasis = False
+      , cueTrackPregapIndex = Just 588
+      , cueTrackIndices     = NE.fromList [0,19,1069] }
+    ]
+  , cueLeadOutTrack =
+      CueTrack
+      { cueTrackOffset      = 8888
+      , cueTrackIsrc        = ""
+      , cueTrackAudio       = True
+      , cueTrackPreEmphasis = False
+      , cueTrackPregapIndex = Just 588
+      , cueTrackIndices     = NE.fromList [0]
+      }
+  }
 
 -- | A correct picture.
 
