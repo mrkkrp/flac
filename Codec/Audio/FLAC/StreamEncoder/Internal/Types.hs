@@ -66,7 +66,7 @@ data EncoderInitStatus
     -- ^ Initialization was attempted on already initialized encoder.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
--- | Enumeration of encoder statuses.
+-- | Enumeration of encoder states.
 
 data EncoderState
   = EncoderStateOK

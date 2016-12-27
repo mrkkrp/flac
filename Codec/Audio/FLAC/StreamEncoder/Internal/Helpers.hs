@@ -40,10 +40,10 @@ encoderProcessHelper
 encoderProcessHelper encoder dataOffset dataSize ipath =
   withCString ipath $ \ipathPtr ->
     c_encoder_process_helper
-      encoder             -- stream encoder
-      dataOffset          -- offset of data chunk
-      dataSize            -- size of data chunk
-      ipathPtr            -- path to input file
+      encoder          -- stream encoder
+      dataOffset       -- offset of data chunk
+      dataSize         -- size of data chunk
+      ipathPtr         -- path to input file
 
 foreign import ccall unsafe "FLAC__stream_encoder_process_helper"
   c_encoder_process_helper :: Encoder -> Word64 -> Word64 -> CString -> IO Bool

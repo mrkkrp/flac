@@ -12,71 +12,33 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Codec.Audio.FLAC.StreamDecoder.Internal
-  ( decoderNew
-  , decoderDelete
+  ( withDecoder
   , decoderSetMd5Checking
-  -- TODO FLAC__stream_decoder_set_metadata_respond
-  -- TODO FLAC__stream_decoder_set_metadata_respond_application
-  -- TODO FLAC__stream_decoder_set_metadata_respond_all
-  -- TODO FLAC__stream_decoder_set_metadata_ignore
-  -- TODO FLAC__stream_decoder_set_metadata_ignore_application
-  -- TODO FLAC__stream_decoder_set_metadata_ignore_all
-  , decoderInitFile
-  , decoderFinish
-  )
+  , decoderGetState
+  , decoderGetFrameSize
+  , decoderProcessSingle
+  , decoderProcessUntilEndOfMetadata
+  , decoderFinish )
 where
 
+import Codec.Audio.FLAC.StreamDecoder.Internal.Types
 import Codec.Audio.FLAC.Util
-import Data.Void
-import Foreign
-import Foreign.C.String
+import Control.Monad.Catch
+import Data.Word
 import Foreign.C.Types
 
-newtype Decoder = Decoder (Ptr Void)
+-- | Create and use a 'Decoder'. The decoder is guaranteed to be freed even
+-- in case of exception.
+--
+-- If memory for the encoder cannot be allocated, corresponding
+-- 'DecoderException' is raised.
 
-data DecoderInitStatus
-  = DecoderInitStatusOK
-    -- ^ Initialization was successful.
-  | DecoderInitStatusUnsupportedContainer
-    -- ^ The library was not compiled with support for the given container
-    -- format.
-  | DecoderInitStatusInvalidCallbacks
-    -- ^ A required callback was not supplied.
-  | DecoderInitStatusMemoryAllocationError
-    -- ^ An error occurred allocating memory.
-  | DecoderInitStatusErrorOpeningFile
-    -- ^ fopen() failed.
-  | DecoderInitStatusAlreadyInitialized
-    -- ^ FLAC__stream_decoder_init_*() was called when the decoder was
-    -- already initialized, usually because FLAC__stream_decoder_finish()
-    -- was not called
-  deriving (Show, Read, Eq, Ord, Bounded, Enum)
-
-data DecoderState
-  = DecoderStateSearchForMetadata
-    -- ^ The decoder is ready to search for metadata.
-  | DecoderStateReadMetadata
-    -- ^ The decoder is ready to or is in the process of reading metadata.
-  | DecoderStateSearchForFrameSync
-    -- ^ The decoder is ready to or is in the process of searching for the
-    -- frame sync code.
-  | DecoderStateReadFrame
-    -- ^ The decoder is ready to or is in the process of reading a frame.
-  | DecoderStateEndOfStream
-    -- ^ The decoder has reached the end of the stream.
-  | DecoderStateOggError
-    -- ^ An error occurred in the underlying Ogg layer.
-  | DecoderStateSeekError
-    -- ^ An error occurred while seeking. The decoder must be flushed or
-    -- reset before decoding can continue.
-  | DecoderStateAborted
-    -- ^ The decoder was aborted by the read callback.
-  | DecoderStateMemoryAllocationError
-    -- ^ An error occurred allocating memory. The decoder is in an invalid
-    -- state and can no longer be used.
-  | DecoderStateUnititialized
-    -- ^ The decoder is in the uninitialized state.
-  deriving (Show, Read, Eq, Ord, Bounded, Enum)
+withDecoder :: (Decoder -> IO a) -> IO a
+withDecoder f = bracket decoderNew (mapM_ decoderDelete) $ \mdecoder ->
+  case mdecoder of
+    Nothing -> throwM
+      (DecoderFailed DecoderStateMemoryAllocationError)
+    Just x -> f x
 
 -- | Create a new stream decoder instance with default settings. In the case
 -- of memory allocation problem 'Nothing' is returned.
@@ -105,15 +67,39 @@ decoderSetMd5Checking = c_decoder_set_md5_checking
 foreign import ccall unsafe "FLAC__stream_decoder_set_md5_checking"
   c_decoder_set_md5_checking :: Decoder -> Bool -> IO Bool
 
--- | Initialize the decoder instance to decode native FLAC files.
+-- | Get current decoder state.
 
-decoderInitFile :: Decoder -> FilePath -> IO DecoderInitStatus
-decoderInitFile decoder path =
-  withCString path $ \cstr ->
-    toEnum' <$> c_decoder_init_file decoder cstr
+decoderGetState :: Decoder -> IO DecoderState
+decoderGetState = fmap toEnum' . c_decoder_get_state
 
-foreign import ccall unsafe "FLAC__stream_decoder_init_file"
-  c_decoder_init_file :: Decoder -> CString -> IO CUInt
+foreign import ccall unsafe "FLAC__stream_decoder_get_state"
+  c_decoder_get_state :: Decoder -> IO CUInt
+
+-- | Get frame size as number of inter-channel samples of last decoded
+-- frame.
+
+decoderGetFrameSize :: Decoder -> IO Word32
+decoderGetFrameSize = fmap fromIntegral . c_decoder_get_blocksize
+
+foreign import ccall unsafe "FLAC__stream_decoder_get_blocksize"
+  c_decoder_get_blocksize :: Decoder -> IO CUInt
+
+-- | Process one audio frame. Return 'False' on failure.
+
+decoderProcessSingle :: Decoder -> IO Bool
+decoderProcessSingle = c_decoder_process_single
+
+foreign import ccall unsafe "FLAC__stream_decoder_process_single"
+  c_decoder_process_single :: Decoder -> IO Bool
+
+-- | Decode until the end of the metadata. We use this to skip to audio
+-- stream.
+
+decoderProcessUntilEndOfMetadata :: Decoder -> IO Bool
+decoderProcessUntilEndOfMetadata = c_decoder_process_until_end_of_metadata
+
+foreign import ccall unsafe "FLAC__stream_decoder_process_until_end_of_metadata"
+  c_decoder_process_until_end_of_metadata :: Decoder -> IO Bool
 
 -- | Finish the decoding process and release resources (also resets decoder
 -- and its settings). Return 'False' in case of trouble.
