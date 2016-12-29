@@ -88,6 +88,7 @@ module Codec.Audio.FLAC.Metadata
   , MaxFrameSize (..)
   , SampleRate (..)
   , Channels (..)
+  , ChannelMask (..)
   , BitsPerSample (..)
   , TotalSamples (..)
   , FileSize (..)
@@ -123,6 +124,7 @@ import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
 import Codec.Audio.FLAC.Metadata.Internal.Object
 import Codec.Audio.FLAC.Metadata.Internal.Types
+import Codec.Audio.Wave
 import Control.Monad
 import Control.Monad.Catch
 import Control.Monad.Except
@@ -134,6 +136,7 @@ import Data.Default.Class
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
+import Data.Set (Set)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Foreign hiding (void)
@@ -142,6 +145,7 @@ import Prelude hiding (iterate)
 import System.IO
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE
+import qualified Data.Set              as E
 import qualified Data.Vector           as V
 
 #if MIN_VERSION_base(4,9,0)
@@ -369,6 +373,21 @@ instance MetaValue Channels where
   type MetaWritable Channels = TypeError NotWritable
 #endif
   retrieve Channels = inStreamInfo getChannels
+
+-- | Channel mask specifying which speaker positions are present. This is
+-- inferred from number of channels using channel assignment rules described
+-- in the FLAC specification.
+--
+-- __Read-only__ attribute represented as @'Set' 'SpeakerPosition'@.
+
+data ChannelMask = ChannelMask
+
+instance MetaValue ChannelMask where
+  type MetaType ChannelMask = Set SpeakerPosition
+#if MIN_VERSION_base(4,9,0)
+  type MetaWritable ChannelMask = TypeError NotWritable
+#endif
+  retrieve ChannelMask = toChannelMask <$> retrieve Channels
 
 -- | Bits per sample (sample depth). FLAC supports from 4 to 32 bits per
 -- sample. Currently the reference encoder and decoder only support up to 24
@@ -934,3 +953,19 @@ vorbisFieldName RGTrackGain = "REPLAYGAIN_TRACK_GAIN"
 vorbisFieldName RGAlbumPeak = "REPLAYGAIN_ALBUM_PEAK"
 vorbisFieldName RGAlbumGain = "REPLAYGAIN_ALBUM_GAIN"
 vorbisFieldName field = (B8.pack . fmap toUpper . show) field
+
+-- | Map number of channels to a 'Set' of 'SpeakerPosition's as per FLAC
+-- specification.
+
+toChannelMask :: Word32 -> Set SpeakerPosition
+toChannelMask n = case n of
+  0 -> E.empty
+  1 -> speakerMono
+  2 -> speakerStereo
+  3 -> E.fromList [SpeakerFrontLeft,SpeakerFrontRight,SpeakerFrontCenter]
+  4 -> speakerQuad
+  5 -> E.insert SpeakerFrontCenter speakerQuad
+  6 -> speaker5_1
+  7 -> E.insert SpeakerBackCenter speaker5_1Surround
+  8 -> speaker7_1Surround
+  x -> E.fromList $ take (fromIntegral x) [minBound..maxBound]

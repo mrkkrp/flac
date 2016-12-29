@@ -38,6 +38,7 @@ where
 
 import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
 import Codec.Audio.FLAC.Metadata.CueSheet
+import Codec.Audio.Wave
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
@@ -83,10 +84,15 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         retrieve SampleRate `shouldReturn` 44100
 
-  describe "SampleRate" $
+  describe "Channels" $
     it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve Channels `shouldReturn` 2
+
+  describe "ChannelMask" $
+    it "is read correctly" $ \path ->
+      runFlacMeta def path . checkNoMod $
+        retrieve ChannelMask `shouldReturn` speakerStereo
 
   describe "BitsPerSample" $
     it "is read correctly" $ \path ->

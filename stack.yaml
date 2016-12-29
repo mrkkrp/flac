@@ -2,4 +2,4 @@ resolver: lts-7.14
 packages:
 - '.'
 extra-deps:
-- wave-0.1.2
+- wave-0.1.3
