@@ -15,7 +15,7 @@ module Codec.Audio.FLAC.StreamDecoder.Internal
   ( withDecoder
   , decoderSetMd5Checking
   , decoderGetState
-  , decoderGetFrameSize
+  , decoderGetBlockSize
   , decoderProcessSingle
   , decoderProcessUntilEndOfMetadata
   , decoderFinish )
@@ -78,8 +78,8 @@ foreign import ccall unsafe "FLAC__stream_decoder_get_state"
 -- | Get frame size as number of inter-channel samples of last decoded
 -- frame.
 
-decoderGetFrameSize :: Decoder -> IO Word32
-decoderGetFrameSize = fmap fromIntegral . c_decoder_get_blocksize
+decoderGetBlockSize :: Decoder -> IO Word32
+decoderGetBlockSize = fmap fromIntegral . c_decoder_get_blocksize
 
 foreign import ccall unsafe "FLAC__stream_decoder_get_blocksize"
   c_decoder_get_blocksize :: Decoder -> IO CUInt

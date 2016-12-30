@@ -59,8 +59,9 @@ static FLAC__StreamDecoderWriteStatus write_callback
           {
             for (ch = 0; ch < channels; ch++)
               {
+                /* Shift back into unsigned values by adding 0x7f. */
                 *((FLAC__uint8 *)obuffer + i * channels + ch)
-                  = (FLAC__uint8)ibuffer[ch][i];
+                  = (FLAC__uint8)ibuffer[ch][i] + 0x80;
               }
           }
         break;
@@ -82,8 +83,7 @@ static FLAC__StreamDecoderWriteStatus write_callback
       case 3:
 
         /* Singed 24 bit samples. Going with 3 bytes step is not so
-         * handy. Apparently we don't need to mask upper 8 bits because
-         * libFLAC doesn't take them into account anyway. Good. */
+         * handy. */
         for (i = 0; i < frame->header.blocksize; i++)
           {
             for (ch = 0; ch < channels; ch++)

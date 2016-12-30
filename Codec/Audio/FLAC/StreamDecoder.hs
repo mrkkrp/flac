@@ -81,7 +81,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
   liftInit (decoderSetMd5Checking d decoderMd5Checking)
-  (maxFrameSize, wave) <- runFlacMeta def ipath $ do
+  (maxBlockSize, wave) <- runFlacMeta def ipath $ do
     let waveFileFormat   = decoderWaveFormat
         waveDataOffset   = 0
         waveDataSize     = 0
@@ -91,11 +91,11 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
       <$> retrieve BitsPerSample
     waveChannelMask <- retrieve ChannelMask
     waveSamplesTotal <- retrieve TotalSamples
-    maxFrameSize <- fromIntegral <$> retrieve MaxFrameSize
-    return (maxFrameSize, Wave {..})
-  let bufferSize = maxFrameSize * fromIntegral (waveBlockAlign wave) + 1
+    maxBlockSize <- fromIntegral <$> retrieve MaxBlockSize
+    return (maxBlockSize, Wave {..})
+  let bufferSize = maxBlockSize * fromIntegral (waveBlockAlign wave) + 1
   withTempFile' opath $ \otemp ->
-    allocaBytes bufferSize $ \buffer -> do
+    bracket (mallocBytes bufferSize) free $ \buffer -> do
       initStatus <- decoderInitHelper d ipath buffer
       case initStatus of
         DecoderInitStatusOK -> return ()
@@ -106,7 +106,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
         processed <- readIORef processedRef
         unless (processed == waveSamplesTotal wave) $ do
           liftBool d (decoderProcessSingle d)
-          frameSize <- fromIntegral <$> decoderGetFrameSize d
+          frameSize <- fromIntegral <$> decoderGetBlockSize d
           let toGrab = frameSize * fromIntegral (waveBlockAlign wave)
           -- FIXME This method relies on the fact that host architecture is
           -- little-endian. It won't work on big-endian architectures. Right
