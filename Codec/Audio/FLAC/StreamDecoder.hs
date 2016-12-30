@@ -44,7 +44,6 @@ import Data.Bool (bool)
 import Data.Default.Class
 import Data.Function
 import Data.IORef
-import Data.Void
 import Foreign
 import System.Directory
 import System.IO
@@ -96,7 +95,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
     return (maxFrameSize, Wave {..})
   let bufferSize = maxFrameSize * fromIntegral (waveBlockAlign wave) + 1
   withTempFile' opath $ \otemp ->
-    withBuffer bufferSize $ \buffer -> do
+    allocaBytes bufferSize $ \buffer -> do
       initStatus <- decoderInitHelper d ipath buffer
       case initStatus of
         DecoderInitStatusOK -> return ()
@@ -142,9 +141,3 @@ liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
 throwState :: Decoder -> IO a
 throwState = decoderGetState >=> throwIO . DecoderFailed
-
--- | Dynamically allocate buffer of specified size and perform a computation
--- with it. The buffer is freed automatically.
-
-withBuffer :: Int -> (Ptr Void -> IO a) -> IO a
-withBuffer n = bracket (mallocBytes n) (const $ return ()) -- free

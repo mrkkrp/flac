@@ -103,9 +103,7 @@ static void error_callback
   , FLAC__StreamDecoderErrorStatus status
   , void *client_data )
 {
-  (void)decoder;
-  (void)status;
-  (void)client_data;
+  (void)decoder, (void)status, (void)client_data;
   return;
 }
 

@@ -178,10 +178,10 @@ foreign import ccall unsafe "FLAC__stream_encoder_set_qlp_coeff_precision"
 -- and use the best one.
 
 encoderSetDoQlpCoeffPrecisionSearch :: Encoder -> Bool -> IO Bool
-encoderSetDoQlpCoeffPrecisionSearch = c_encoder_set_qlp_coeff_precision_search
+encoderSetDoQlpCoeffPrecisionSearch = c_encoder_set_qlp_coeff_prec_search
 
-foreign import ccall unsafe "FLAC__stream_encoder_set_do_qlp_coeff_precision_search"
-  c_encoder_set_qlp_coeff_precision_search :: Encoder -> Bool -> IO Bool
+foreign import ccall unsafe "FLAC__stream_encoder_set_do_qlp_coeff_prec_search"
+  c_encoder_set_qlp_coeff_prec_search :: Encoder -> Bool -> IO Bool
 
 -- | Set to 'False' to let the encoder estimate the best model order based
 -- on the residual signal energy, or 'True' to force the encoder to evaluate
