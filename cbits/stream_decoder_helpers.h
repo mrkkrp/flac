@@ -36,6 +36,6 @@
 
 #include <FLAC/stream_decoder.h>
 
-/* TODO */
+FLAC__StreamDecoderInitStatus FLAC__stream_decoder_init_helper(FLAC__StreamDecoder *, char *, void *);
 
 #endif /* FLAC__STREAM_DECODER_HELPERS_H */

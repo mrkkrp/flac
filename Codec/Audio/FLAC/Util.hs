@@ -14,12 +14,17 @@ module Codec.Audio.FLAC.Util
   , toEnum'
   , fromEnum'
   , peekCStringText
-  , withCStringText )
+  , withCStringText
+  , withTempFile' )
 where
 
+import Control.Exception
 import Data.Text (Text)
 import Foreign
 import Foreign.C.String
+import System.Directory
+import System.FilePath
+import System.IO
 import Unsafe.Coerce
 import qualified Data.ByteString    as B
 import qualified Data.Text          as T
@@ -55,3 +60,27 @@ peekCStringText = fmap T.decodeUtf8 . B.packCString
 withCStringText :: Text -> (CString -> IO a) -> IO a
 withCStringText text = B.useAsCString bytes
   where bytes = T.encodeUtf8 (T.filter (/= '\0') text)
+
+-- | A custom wrapper for creating temporary files in the same directory as
+-- given file. 'Handle' is not opened, you only get 'FilePath' in the
+-- callback.
+
+withTempFile' :: FilePath -> (FilePath -> IO a) -> IO a
+withTempFile' path = bracketOnError acquire cleanup
+  where
+    acquire = do
+      (path',h) <- openBinaryTempFile dir file
+      hClose h
+      return path'
+    cleanup = ignoringIOErrors . removeFile -- in case exception strikes
+              -- before we create the actual file
+    dir     = takeDirectory path
+    file    = takeFileName  path
+
+-- | Perform specified action ignoring IO exceptions it may throw.
+
+ignoringIOErrors :: IO () -> IO ()
+ignoringIOErrors ioe = ioe `catch` handler
+  where
+    handler :: IOError -> IO ()
+    handler = const (return ())

@@ -49,7 +49,7 @@ FLAC__bool FLAC__stream_encoder_process_helper
   unsigned msw = round_to_bytes(bits_per_sample); /* mono sample width */
   unsigned block_align = channels * msw;
   FLAC__uint64 samples_to_process = data_size / block_align;
-  FLAC__uint64 read_size = 1024;
+  FLAC__uint64 read_size = 4096;
   void *buffer_raw = malloc(read_size * block_align);
   FLAC__int32 *buffer = malloc(read_size * sizeof(FLAC__int32) * channels + 1);
   FILE *ifile = fopen(ifile_name, "r");
@@ -98,7 +98,7 @@ FLAC__bool FLAC__stream_encoder_process_helper
              * byte per sample and samples are unsigned as per WAVE spec. */
             for (i = 0; i < samples * channels; i++)
               {
-                *(buffer + i) = *((FLAC__uint8 *)buffer_raw + i);
+                *((FLAC__uint8 *)buffer + i) = *((FLAC__uint8 *)buffer_raw + i);
               }
             break;
 

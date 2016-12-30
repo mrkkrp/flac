@@ -34,20 +34,20 @@ where
 import Codec.Audio.FLAC.StreamEncoder.Internal
 import Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
+import Codec.Audio.FLAC.Util
 import Codec.Audio.Wave
 import Control.Exception
-import Control.Monad.Except
+import Control.Monad
+import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bool (bool)
 import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word
 import System.Directory
-import System.FilePath
-import System.IO
 
--- | Parameters of stream encoder and input to encode. Note that the
--- 'encoderCompression' parameter influences a number of other parameters on
--- its own as specified here
+-- | Parameters of stream encoder. Note that the 'encoderCompression'
+-- parameter influences a number of other parameters on its own as specified
+-- here
 -- <https://xiph.org/flac/api/group__flac__stream__encoder.html#gae49cf32f5256cb47eecd33779493ac85>.
 -- The parameters that it sets automatically are wrapped in 'Maybe's, so you
 -- can choose whether to use the value that is set by 'encoderCompression'
@@ -131,8 +131,7 @@ instance Default EncoderSettings where
 --     * Supported values for bits per sample are 4–24 inclusive.
 --     * Acceptable sample rate lies in the range 1–655350 inclusive.
 
-encodeFlac
-  :: MonadIO m
+encodeFlac :: MonadIO m
   => EncoderSettings   -- ^ Encoder settings
   -> FilePath          -- ^ File to encode
   -> FilePath          -- ^ Where to save the resulting FLAC file
@@ -175,12 +174,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   -- Set the estimate (which is likely correct!), to avoid rewrite of
   -- STREAMINFO metadata block after encoding.
   liftInit (encoderSetTotalSamplesEstimate e totalSamples)
-  let acquire = openBinaryTempFile odir ofile
-      cleanup = removeFile . fst
-      odir    = takeDirectory opath
-      ofile   = takeFileName  opath
-  bracketOnError acquire cleanup $ \(otemp, h) -> do
-    hClose h
+  withTempFile' opath $ \otemp -> do
     initStatus <- encoderInitFile e otemp
     case initStatus of
       EncoderInitStatusOK -> return ()
@@ -189,14 +183,14 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
       (fromIntegral $ waveDataOffset wave)
       (waveDataSize wave)
       ipath
-    renameFile otemp opath
     liftBool e (encoderFinish e)
+    renameFile otemp opath
 
 ----------------------------------------------------------------------------
 -- Helpers
 
 -- | Execute an initializing action that returns 'False' on failure and take
--- care of error reporting. In case of trouble, @'FlacEncoderInitFailed'
+-- care of error reporting. In case of trouble, @'EncoderInitFailed'
 -- 'EncoderInitStatusAlreadyInitialized'@ is thrown.
 
 liftInit :: IO Bool -> IO ()
