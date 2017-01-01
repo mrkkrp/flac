@@ -50,11 +50,12 @@ FLAC__bool FLAC__stream_encoder_process_helper
   unsigned block_align = channels * msw;
   FLAC__uint64 samples_to_process = data_size / block_align;
   FLAC__uint64 read_size = 4096;
-  void *buffer_raw = malloc(read_size * block_align);
-  FLAC__int32 *buffer = malloc(read_size * sizeof(FLAC__int32) * channels + 1);
+  void *buffer_raw = malloc(read_size * block_align + 1);
+  FLAC__int32 *buffer = malloc(read_size * sizeof(FLAC__int32) * channels);
   FILE *ifile = fopen(ifile_name, "r");
   FLAC__uint64 samples;
   unsigned i;
+  FLAC__int32 x;
 
   if (data_size % block_align)
     {
@@ -98,7 +99,9 @@ FLAC__bool FLAC__stream_encoder_process_helper
              * byte per sample and samples are unsigned as per WAVE spec. */
             for (i = 0; i < samples * channels; i++)
               {
-                *((FLAC__uint8 *)buffer + i) = *((FLAC__uint8 *)buffer_raw + i);
+                /* Need to center the range at 0 and use signed integer as
+                 * per FLAC docs. */
+                *(buffer + i) = *((FLAC__uint8 *)buffer_raw + i) - 0x80;
               }
             break;
 
@@ -116,13 +119,16 @@ FLAC__bool FLAC__stream_encoder_process_helper
           case 3:
 
             /* Singed 24 bit samples. Going with 3 bytes step is not so
-             * handy. Apparently we don't need to mask upper 8 bits because
-             * libFLAC doesn't take them into account anyway. Good. */
+             * handy. */
             for (i = 0; i < samples * channels; i++)
               {
                 /* FIXME Only works on little-endian architectures. */
-                *(buffer + i) = *(FLAC__int32 *)
-                  ((FLAC__byte *)buffer_raw + i * 3);
+                x = *(FLAC__int32 *)((FLAC__byte *)buffer_raw + i * 3);
+                if (x & 0x800000) /* do sign extension */
+                  x |= 0xff000000; /* negative */
+                else
+                  x &= 0x00ffffff; /* positive */
+                *(buffer + i) = x;
               }
             break;
 
