@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Codec.Audio.FLAC.StreamEncoder.Apodization
--- Copyright   :  © 2016 Mark Karpov
+-- Copyright   :  © 2016–2017 Mark Karpov
 -- License     :  BSD 3 clause
 --
 -- Maintainer  :  Mark Karpov <markkarpov@openmailbox.org>

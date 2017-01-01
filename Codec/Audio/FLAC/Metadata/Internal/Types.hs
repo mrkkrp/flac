@@ -1,6 +1,6 @@
 -- |
 -- Module      :  Codec.Audio.FLAC.Metadata.Internal.Types
--- Copyright   :  © 2016 Mark Karpov
+-- Copyright   :  © 2016–2017 Mark Karpov
 -- License     :  BSD 3 clause
 --
 -- Maintainer  :  Mark Karpov <markkarpov@openmailbox.org>
