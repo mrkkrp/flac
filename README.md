@@ -7,9 +7,101 @@
 [![Build Status](https://travis-ci.org/mrkkrp/flac.svg?branch=master)](https://travis-ci.org/mrkkrp/flac)
 [![Coverage Status](https://coveralls.io/repos/mrkkrp/flac/badge.svg?branch=master&service=github)](https://coveralls.io/github/mrkkrp/flac?branch=master)
 
-Complete high-level Haskell binding to libFLAC. This is a work in progress.
+* [Aims of the project](#aims-of-the-project)
+* [Motivation](#motivation)
+* [Provided functionality](#provided-functionality)
+* [Limitations](#limitations)
+* [Quick start](#quick-start)
+* [Contribution](#contribution)
+* [License](#license)
 
-NB Ogg FLAC is not supported.
+This is a complete high-level Haskell binding
+to [libFLAC](https://xiph.org/flac/).
+
+## Aims of the project
+
+Here are several ideas the project follows:
+
+* Concentrate only on native FLAC format without messing with other audio
+  formats or their flavors. This library is about FLAC only.
+
+* Be a complete interface for FLAC file manipulation in Haskell. “Complete”
+  means that everything supported by the reference implementation should be
+  supported by this package. This is in the hope to prevent fragmentation
+  and proliferation of different libraries to work with FLAC with each of
+  them covering only some 80% of functionality the library author needed and
+  neglecting other 20%. A lot of effort was put to make the first libFLAC
+  binding so good so you don't need another one.
+
+* Be as efficient as the underlying C implementation, avoid adding any sort
+  of overhead (memory/speed/or otherwise).
+
+* Provide *idiot-proof* API using type system to kindly guard against bad
+  things, but not so much to remain beginner-friendly and simple.
+
+* Make invalid code and data unrepresentable.
+
+## Motivation
+
+FLAC is awesome and Haskell is awesome, surely there should be a way to
+achieve an even higher level of awesomeness by coding a safe Haskell API to
+the fast libFLAC library.
+
+Seriously though, we
+have [`htaglib`](https://hackage.haskell.org/package/htaglib) to work with
+audio metadata, but it does not support a lot of FLAC-specific things I'd
+love to manipulate. We
+have [`hsndfile`](https://hackage.haskell.org/package/hsndfile), but I don't
+really want to read FLAC data into a buffer or Haskell `Vector`. How simple
+it is (if possible) to decode a FLAC file using that library? How simple it
+is to figure out where to begin with such a task? With `flac` it's
+`decodeFlac def "myfile.falc" "myfile.wav"` — done, average song in a
+fraction of second.
+
+## Provided functionality
+
+Here we go:
+
+* Metadata — full support for reading/writing/deleting of all audio
+  parameters, application data, seek tables, vorbis comments of all sorts,
+  CUE sheets, and even pictures.
+
+* Stream decoder — simple interface for decoding to vanilla WAVE and RF64
+  (support for files larger than 4 Gb).
+
+* Stream encoder — a lot of options to tweak, everything that libFLAC has,
+  but you can also use `def` and just encode vanilla WAVE or RF64 file into
+  native FLAC. Simple and efficient.
+
+## Limitations
+
+Right now there are three main limitations:
+
+* No Ogg FLAC support, and I do not plan to add it, but I'll accept a PR
+  adding support for Ogg FLAC.
+
+* It's not possible to use custom callbacks for printing decoding/encoding
+  progress in real-time and stuff like that. Not a big issue IMO, given that
+  we get easy and safe API instead.
+
+* Only works on little-endian architectures so far, I'll accept a PR lifting
+  this limitation.
+
+## Quick start
+
+The best way to start using `flac` is to take a look
+at [the Haddocks](https://hackage.haskell.org/package/flac). Encoding and
+decoding is so simple that a baby could handle it, and for metadata there
+are examples and a lot of details in the docs. Feel free to ask me question
+if you get stuck with something though.
+
+## Contribution
+
+Please kindly direct all issues, bugs, and questions
+to
+[the GitHub issue tracker for this project](https://github.com/mrkkrp/flac/issues).
+
+Pull requests are also welcome and will be reviewed quickly.
 
 ## License
 
