@@ -20,6 +20,11 @@
 -- The implementation uses the reference implementation of FLAC — libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
+--
+-- The binding works with minimal overhead compared to pure C
+-- implementation. Encoding speed is equal to that of @flac@ command line
+-- tool. Memory consumption is minimal and remains constant regardless of
+-- size of file to decode.
 
 {-# LANGUAGE RecordWildCards #-}
 

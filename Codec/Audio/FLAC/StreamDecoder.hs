@@ -12,14 +12,19 @@
 -- === How to use this module
 --
 -- Just call the 'decodeFlac' function with 'DecoderSettings', input and
--- output file names. The 'encodeFlac' function can produce vanilla WAVE
--- and RF64.
+-- output file names. The 'decodeFlac' function can produce vanilla WAVE and
+-- RF64.
 --
 -- === Low-level details
 --
 -- The implementation uses the reference implementation of FLAC — libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
+--
+-- The binding works with minimal overhead compared to pure C
+-- implementation. Decoding speed is equal to that of @flac@ command line
+-- tool. Memory consumption is minimal and remains constant regardless of
+-- size of file to decode.
 
 {-# LANGUAGE RecordWildCards #-}
 
@@ -51,16 +56,16 @@ import System.IO
 -- | Parameters of stream decoder.
 
 data DecoderSettings = DecoderSettings
-  { decoderMd5Checking :: Bool
+  { decoderMd5Checking :: !Bool
     -- ^ If 'True', the decoder will compute the MD5 signature of the
     -- unencoded audio data while decoding and compare it to the signature
     -- from the STREAMINFO block. Default value: 'False'.
-  , decoderWaveFormat :: WaveFormat
+  , decoderWaveFormat :: !WaveFormat
     -- ^ This specifies WAVE format in which to save the decoded file. You
     -- can choose between 'WaveVanilla' and 'WaveRF64'; choose the latter if
     -- uncompressed file is expected to be longer than 4 Gb. Default value:
     -- 'WaveVanilla'.
-  }
+  } deriving (Show, Read, Eq, Ord)
 
 instance Default DecoderSettings where
   def = DecoderSettings

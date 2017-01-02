@@ -751,7 +751,7 @@ getMetaChain = FlacMeta $ do
   chain <- asks metaChain
   NE.fromList <$> withIterator chain (fmap Just . liftIO . iteratorGetBlockType)
 
--- | Returns 'True' if actions in current 'FlacMeta' context have modified
+-- | Return 'True' if actions in current 'FlacMeta' context have modified
 -- FLAC metadata. If so, the FLAC file will be updated to reflect these
 -- changes on the way out from the 'FlacMeta' monad.
 

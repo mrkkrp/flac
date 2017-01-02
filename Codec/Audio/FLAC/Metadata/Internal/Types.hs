@@ -110,9 +110,9 @@ data MetaChainStatus
 
 data MetaException
   = MetaGeneralProblem MetaChainStatus
-    -- ^ General failure, see the attached 'MetaChainStatus'
+    -- ^ General failure, see the attached 'MetaChainStatus'.
   | MetaInvalidSeekTable
-    -- ^ Invalid seek table was passed to be written
+    -- ^ Invalid seek table was passed to be written.
   | MetaInvalidCueSheet Text
     -- ^ Invalid CUE sheet was passed to be written. The reason why the data
     -- was invalid is attached.
