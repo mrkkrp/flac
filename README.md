@@ -12,6 +12,7 @@
 * [Provided functionality](#provided-functionality)
 * [Limitations](#limitations)
 * [Quick start](#quick-start)
+* [Related packages](#related-packages)
 * [Contribution](#contribution)
 * [License](#license)
 
@@ -94,6 +95,13 @@ at [the Haddocks](https://hackage.haskell.org/package/flac). Encoding and
 decoding is so simple that a baby could handle it, and for metadata there
 are examples and a lot of details in the docs. Feel free to ask me question
 if you get stuck with something though.
+
+## Related packages
+
+The following packages are designed to be used with `flac`:
+
+* [`flac-picture`](https://hackage.haskell.org/package/flac-picture) — add
+  pictures to FLAC metadata easier.
 
 ## Contribution
 
