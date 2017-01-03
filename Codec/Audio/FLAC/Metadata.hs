@@ -588,6 +588,7 @@ data VorbisField
   | TrackTotal         -- ^ Total number of tracks in the collection this
                        -- track belongs to.
   | DiscNumber         -- ^ Disc number in a multi-disc release.
+  | DiscTotal          -- ^ Total number of discs in a multi-disc release.
   | Artist             -- ^ The artist generally considered responsible for
                        -- the work. In popular music this is usually the
                        -- performing band or singer. For classical music it
