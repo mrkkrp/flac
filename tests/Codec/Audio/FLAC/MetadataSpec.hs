@@ -46,6 +46,7 @@ import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Vector (Vector)
 import System.Directory
+import System.IO
 import System.IO.Temp (withSystemTempFile)
 import Test.Hspec hiding (shouldBe, shouldReturn)
 import qualified Codec.Audio.FLAC.Metadata as Flac
@@ -411,7 +412,8 @@ runFlacMeta = Flac.runFlacMeta
 -- finishes.
 
 withSandbox :: ActionWith FilePath -> IO ()
-withSandbox action = withSystemTempFile "sample.flac" $ \path _ -> do
+withSandbox action = withSystemTempFile "sample.flac" $ \path h -> do
+  hClose h
   copyFile "audio-samples/sample.flac" path
   action path
 
