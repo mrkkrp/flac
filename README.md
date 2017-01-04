@@ -56,7 +56,7 @@ have [`hsndfile`](https://hackage.haskell.org/package/hsndfile), but I don't
 really want to read FLAC data into a buffer or Haskell `Vector`. How simple
 it is (if possible) to decode a FLAC file using that library? How simple it
 is to figure out where to begin with such a task? With `flac` it's
-`decodeFlac def "myfile.falc" "myfile.wav"` — done, average song in a
+`decodeFlac def "myfile.flac" "myfile.wav"` — done, average song in a
 fraction of second.
 
 ## Provided functionality
