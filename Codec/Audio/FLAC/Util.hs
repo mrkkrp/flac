@@ -61,21 +61,21 @@ peekCStringText = fmap T.decodeUtf8 . B.packCString
 
 withCStringText :: Text -> (CString -> IO a) -> IO a
 withCStringText text = B.useAsCString bytes
-  where bytes = T.encodeUtf8 (T.filter (/= '\0') text)
+  where
+    bytes = T.encodeUtf8 (T.filter (/= '\0') text)
 
 -- | A custom wrapper for creating temporary files in the same directory as
 -- given file. 'Handle' is not opened, you only get 'FilePath' in the
 -- callback.
 
 withTempFile' :: FilePath -> (FilePath -> IO a) -> IO a
-withTempFile' path = bracketOnError acquire cleanup
+withTempFile' path m = bracketOnError acquire cleanup $
+  \(path', h) -> hClose h >> m path'
   where
-    acquire = do
-      (path',h) <- openBinaryTempFile dir file
-      hClose h
-      return path'
-    cleanup = ignoringIOErrors . removeFile -- in case exception strikes
-              -- before we create the actual file
+    acquire = openBinaryTempFile dir file
+    -- NOTE We need ignoringIOErrors in the case exception strikes before we
+    -- create the actual file.
+    cleanup = ignoringIOErrors . removeFile . fst
     dir     = takeDirectory path
     file    = takeFileName  path
 
