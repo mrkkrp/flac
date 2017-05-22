@@ -17,14 +17,14 @@
 --
 -- === Low-level details
 --
--- The implementation uses the reference implementation of FLAC — libFLAC (C
+-- The implementation uses the reference implementation of FLAC—libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
--- The binding works with minimal overhead compared to pure C
--- implementation. Encoding speed is equal to that of @flac@ command line
--- tool. Memory consumption is minimal and remains constant regardless of
--- size of file to decode.
+-- The binding works with minimal overhead compared to the C implementation.
+-- Encoding speed is equal to that of @flac@ command line tool. Memory
+-- consumption is minimal and remains constant regardless of size of file to
+-- decode.
 
 {-# LANGUAGE RecordWildCards #-}
 
@@ -50,7 +50,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word
 import System.Directory
 
--- | Parameters of stream encoder. Note that the 'encoderCompression'
+-- | Parameters of the stream encoder. Note that the 'encoderCompression'
 -- parameter influences a number of other parameters on its own as specified
 -- here
 -- <https://xiph.org/flac/api/group__flac__stream__encoder.html#gae49cf32f5256cb47eecd33779493ac85>.
@@ -176,7 +176,7 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
     (liftInit . encoderSetMinResidualPartitionOrder e . fst)
   forM_ encoderResidualPartitionOrders
     (liftInit . encoderSetMaxResidualPartitionOrder e . snd)
-  -- Set the estimate (which is likely correct!), to avoid rewrite of
+  -- Set the estimate (which is likely correct), to avoid rewrite of
   -- STREAMINFO metadata block after encoding.
   liftInit (encoderSetTotalSamplesEstimate e totalSamples)
   withTempFile' opath $ \otemp -> do

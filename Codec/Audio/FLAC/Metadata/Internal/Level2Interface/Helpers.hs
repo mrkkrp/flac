@@ -337,8 +337,8 @@ getCueSheetData block = do
   (cueTracks, cueLeadOutTrack) <-
     case numTracks of
       0 ->
-        -- NOTE Should probably never happen unless FLAC file is invalid with
-        -- respect to the spec.
+        -- NOTE Should probably never happen unless FLAC file is invalid
+        -- with respect to the spec.
         throwM (MetaInvalidCueSheet "Cannot read CUE sheet without tracks")
       1 -> ([],) <$> getCueSheetTrack block 0
       _ -> do
@@ -381,7 +381,9 @@ getCueSheetTrack block n = do
       pregapIndex <- if hasPregap
         then Just <$> c_get_cue_sheet_track_index block n 0
         else return Nothing
-      trackIndices <- mapM (c_get_cue_sheet_track_index block n) (NE.fromList range)
+      trackIndices <- mapM
+        (c_get_cue_sheet_track_index block n)
+        (NE.fromList range)
       return (pregapIndex, trackIndices)
   return CueTrack {..}
 
@@ -445,7 +447,7 @@ foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_lead_in"
 foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_is_cd"
   c_set_cue_sheet_is_cd :: Metadata -> Bool -> IO ()
 
--- | Poke a 'CueTrack' an specified index.
+-- | Poke a 'CueTrack' at a specified index.
 
 setCueSheetTrack :: Metadata -> CueTrack -> Word8 -> Word8 -> IO Bool
 setCueSheetTrack block CueTrack {..} n n' = do
@@ -489,7 +491,7 @@ foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_track_index"
 -- Picture
 
 -- | Get type of picture assuming that given 'Metadata' block is a
--- 'PictureBolck'.
+-- 'PictureBlock'.
 
 getPictureType :: Metadata -> IO PictureType
 getPictureType = fmap toEnum' . c_get_picture_type
@@ -497,7 +499,7 @@ getPictureType = fmap toEnum' . c_get_picture_type
 foreign import ccall unsafe "FLAC__metadata_get_picture_type"
   c_get_picture_type :: Metadata -> IO CUInt
 
--- | Get picture data from given 'Metadata' block.
+-- | Get picture data from a given 'Metadata' block.
 
 getPictureData :: Metadata -> IO PictureData
 getPictureData block = do
@@ -534,7 +536,7 @@ foreign import ccall unsafe "FLAC__metadata_get_picture_colors"
 foreign import ccall unsafe "FLAC__metadata_get_picture_data"
   c_get_picture_data :: Metadata -> Ptr Word32 -> IO CString
 
--- | Set 'PictureType' to given 'Metadata' block that should be a
+-- | Set 'PictureType' to a given 'Metadata' block that should be a
 -- 'PictureBlock'.
 
 setPictureType :: Metadata -> PictureType -> IO ()
@@ -577,7 +579,7 @@ foreign import ccall unsafe "FLAC__metadata_set_picture_colors"
 
 -- | Execute a collection of actions that return 'False' on failure. As soon
 -- as failure is reported, stop the execution and return 'False'. Return
--- 'True' in case of success.
+-- 'True' in the case of success.
 
 shortcutFalse :: [IO Bool] -> IO Bool
 shortcutFalse []     = return True

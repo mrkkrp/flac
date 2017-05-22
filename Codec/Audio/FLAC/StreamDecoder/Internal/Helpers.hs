@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Wrappers around helpers written to help work with stream decoder.
+-- Wrappers around helpers written to help work with the stream decoder.
 
 module Codec.Audio.FLAC.StreamDecoder.Internal.Helpers
   ( decoderInitHelper )

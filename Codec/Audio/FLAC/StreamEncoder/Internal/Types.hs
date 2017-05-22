@@ -23,8 +23,8 @@ import Data.Void
 import Foreign
 import Numeric.Natural
 
--- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
--- pointer to encoder instance.
+-- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent a
+-- pointer to an encoder instance.
 
 newtype Encoder = Encoder (Ptr Void)
 
@@ -41,9 +41,9 @@ data EncoderInitStatus
   | EncoderInitStatusInvalidCallbacks
     -- ^ A required callback was not supplied.
   | EncoderInitStatusInvalidNumberOfChannels
-    -- ^ The encoder has an invalid setting for number of channels.
+    -- ^ The encoder has an invalid setting for the number of channels.
   | EncoderInitStatusInvalidBitsPerSample
-    -- ^ The encoder has an invalid setting for bits-per-sample. FLAC
+    -- ^ The encoder has an invalid setting for the bits-per-sample. FLAC
     -- supports 4-32 bps but the reference encoder currently supports only
     -- up to 24 bps.
   | EncoderInitStatusInvalidSampleRate

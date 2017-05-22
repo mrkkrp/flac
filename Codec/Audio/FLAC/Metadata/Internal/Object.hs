@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Wrappers for functions to work with metadata objects, see:
+-- Wrappers for the functions to work with metadata objects, see:
 --
 -- <https://xiph.org/flac/api/group__flac__metadata__object.html>.
 
@@ -89,7 +89,7 @@ foreign import ccall unsafe "FLAC__metadata_object_cuesheet_track_resize_indices
   c_object_cuesheet_track_resize_indices :: Metadata -> CUInt -> CUInt -> IO Bool
 
 -- | Check a CUE sheet to see if it conforms to the FLAC specification. If
--- something is wrong, the explanation is return in 'Just', otherwise
+-- something is wrong, the explanation is returned in 'Just', otherwise
 -- 'Nothing' is returned.
 
 objectCueSheetIsLegal :: Metadata -> Bool -> IO (Maybe Text)

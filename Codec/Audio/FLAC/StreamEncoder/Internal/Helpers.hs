@@ -7,7 +7,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Wrappers around helpers written to help work with stream encoder.
+-- Wrappers around helpers written to help work with the stream encoder.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}

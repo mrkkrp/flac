@@ -12,7 +12,7 @@
 --
 -- === How to use this module
 --
--- Just like other modules of this library, the API is file-centered — no
+-- Just like the other modules of this library, the API is file-centered—no
 -- streaming support is available at this time (in libFLAC as well).
 -- Retrieving and editing metadata information is very easy, you only need
 -- three functions: 'runFlacMeta', 'retrieve', and @('=->')@.
@@ -29,7 +29,7 @@
 -- >   retrieve (VorbisComment Artist) >>= liftIO . print
 --
 -- Normally you would just return them packed in a tuple from the monad, of
--- course. We print the values just for demonstration.
+-- course. We print the values just for a demonstration.
 --
 -- The next example shows how to set a couple of tags:
 --
@@ -50,14 +50,14 @@
 --
 -- === Low-level details
 --
--- The implementation uses the reference implementation of FLAC — libFLAC (C
+-- The implementation uses the reference implementation of FLAC—libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
--- This module in particular uses level 2 metadata interface and it's not
--- possible to choose other interface (such as level 0 and 1). This should
--- not be of any concern to end-user, however, as level 2 supports more
--- functionality than the other levels.
+-- This module in particular uses the level 2 metadata interface and it's
+-- not possible to choose other interface (such as level 0 and 1). However,
+-- this should not be of any concern to the end-user, as the level 2
+-- supports more functionality than the other levels.
 
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE ConstrainedClassMethods    #-}
@@ -171,11 +171,11 @@ newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
            , MonadCatch
            , MonadMask )
 
--- | Non-public shortcut for inner monad stack of 'FlacMeta'.
+-- | A non-public shortcut for the inner monad stack of 'FlacMeta'.
 
 type Inner a = ReaderT Context IO a
 
--- | Context that 'Inner' passes around.
+-- | The context that 'Inner' passes around.
 
 data Context = Context
   { metaChain    :: MetaChain     -- ^ Metadata chain
@@ -188,7 +188,7 @@ data Context = Context
 data MetaSettings = MetaSettings
   { metaAutoVacuum :: !Bool
     -- ^ Whether to traverse all metadata blocks just before padding sorting
-    -- (if enabled, see 'metaSortPadding') and writing data to file,
+    -- (if enabled, see 'metaSortPadding') and writing data to a file,
     -- deleting all metadata blocks that appear to be empty, e.g. vorbis
     -- comment block without any comments (tags) in it. Default value:
     -- 'True'.
@@ -204,7 +204,7 @@ data MetaSettings = MetaSettings
     -- entire file. Default value: 'True'.
   , metaPreserveFileStats :: !Bool
     -- ^ If 'True', the owner and modification time will be preserved even
-    -- if new FLAC file is written (this is for the cases when we need to
+    -- if a new FLAC file is written (this is for the cases when we need to
     -- write entire FLAC file and thus a copy of the file is written).
     -- Default value: 'True'.
   } deriving (Show, Read, Eq, Ord)
@@ -220,11 +220,12 @@ instance Default MetaSettings where
 -- subtle and rather low-level details of metadata editing, just pass 'def'
 -- unless you know what you are doing. 'FilePath' specifies location of FLAC
 -- file to read\/edit in the file system. 'FlacMeta' is a monadic action
--- that describes what to do with metadata. Compose it from 'retrieve' and
--- @('=->')@.
+-- that describes what to do with the metadata. Compose it from 'retrieve'
+-- and @('=->')@.
 --
--- The action will throw 'Data.Text.Encoding.Error.UnicodeException' if text
--- data like Vorbis Comment entries cannot be read as UTF-8-encoded value.
+-- The action will throw 'Data.Text.Encoding.Error.UnicodeException' if the
+-- text data like Vorbis Comment entries cannot be read as a UTF-8-encoded
+-- value.
 --
 -- If a problem occurs, 'MetaException' is thrown with attached
 -- 'MetaChainStatus' that should help investigating what went wrong.
@@ -252,11 +253,12 @@ runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
 ----------------------------------------------------------------------------
 -- Meta values
 
--- | A class for types that specify which metadata attributes to
+-- | A class for the types that specify which metadata attributes to
 -- read\/write. It's not expected that users of the library will define new
--- metadata attributes other than via combination of existing ones, which is
--- also useful. For example, 'Duration' and 'BitRate' are not read from FLAC
--- file metadata directly, but defined in terms of other attributes.
+-- metadata attributes other than via combination of the existing ones,
+-- which is also useful. For example, 'Duration' and 'BitRate' are not read
+-- from FLAC file metadata directly, but defined in terms of other
+-- attributes.
 
 class MetaValue a where
 
@@ -266,8 +268,8 @@ class MetaValue a where
 
   type MetaType a :: *
 
-  -- | Associated type of kind 'Constraint' that controls whether particular
-  -- piece of metadata is writable or not.
+  -- | Associated type of the kind 'Constraint' that controls whether a
+  -- particular piece of metadata is writable or not.
 
   type MetaWritable a :: Constraint
 
@@ -277,7 +279,7 @@ class MetaValue a where
 
   retrieve :: a -> FlacMeta (MetaType a)
 
-  -- | Given value that determines what to write and a value to write,
+  -- | Given a value that determines what to write and a value to write,
   -- add\/replace a piece of metadata information. This is how you edit
   -- metadata. To delete something, set it to 'Nothing' (well, it should be
   -- something that /can be missing/, for example you cannot delete
@@ -511,7 +513,7 @@ instance MetaValue Application where
 
 -- | Seek table as a 'Vector' of 'SeekPoint's. Seek points within a table
 -- must be sorted in ascending order by sample number. If you try to write
--- an invalid seek table, 'MetaException' will be raised using
+-- an invalid seek table, 'MetaException' will be raised using the
 -- 'MetaInvalidSeekTable' constructor.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' ('Vector'
@@ -578,11 +580,11 @@ data VorbisComment = VorbisComment VorbisField
 -- entries.
 
 data VorbisField
-  = Title              -- ^ Track\/Work name.
+  = Title              -- ^ Track\/work name.
   | Version            -- ^ The version field may be used to differentiate
                        -- multiple versions of the same track title in a
                        -- single collection (e.g. remix info).
-  | Album              -- ^ The collection name to which this track belongs
+  | Album              -- ^ The collection name to which this track belongs.
   | TrackNumber        -- ^ The track number of this piece if part of a
                        -- specific larger collection or album.
   | TrackTotal         -- ^ Total number of tracks in the collection this
@@ -616,7 +618,8 @@ data VorbisField
                        -- distributors of the track. This could be a URL, an
                        -- email address, the physical address of the
                        -- producing label.
-  | ISRC               -- ^ ISRC number for the track, see <http://isrc.ifpi.org/en>.
+  | ISRC               -- ^ ISRC number for the track, see
+                       -- <http://isrc.ifpi.org/en>.
   | Rating             -- ^ Rating, usually mapped as 1–5 stars with actual
                        -- values “20”, “40”, “60”, “80”, “100” stored.
   | RGTrackPeak        -- ^ Replay gain track peak, e.g. “0.99996948”.
@@ -643,7 +646,7 @@ instance MetaValue VorbisComment where
       setModified
 
 -- | A CUE sheet stored in FLAC metadata. If you try to write an invalid CUE
--- sheet 'MetaException' will be raised with 'MetaInvalidCueSheet'
+-- sheet 'MetaException' will be raised with the 'MetaInvalidCueSheet'
 -- constructor which includes a 'Text' value with explanation why the CUE
 -- sheet was considered invalid. Import "Codec.Audio.FLAC.Metadata.CueSheet"
 -- to manipulate 'CueSheetData' and 'CueTrack's.
@@ -744,7 +747,7 @@ wipePictures =
 ----------------------------------------------------------------------------
 -- Debugging and testing
 
--- | Return list of all 'MetadataType's of metadata blocks detected in
+-- | Return a list of all 'MetadataType's of metadata blocks detected in
 -- order.
 
 getMetaChain :: FlacMeta (NonEmpty MetadataType)
@@ -772,11 +775,11 @@ inStreamInfo f =
     liftIO . (iteratorGetBlock >=> f)
 
 -- | Given 'MetadataType' (type of metadata block) and an action that uses
--- an iterator which points to a block of specified type, perform that
+-- an iterator which points to a block of the specified type, perform that
 -- action and return its result wrapped in 'Just' if block of requested type
--- was found, 'Nothing' otherwise. If there are several blocks of given
--- type, action will be performed for each of them, but only first result
--- will be returned.
+-- was found, 'Nothing' otherwise. If there are several blocks of the given
+-- type, action will be performed for each of them, but only the first
+-- result will be returned.
 
 withMetaBlock
   :: MetadataType      -- ^ Type of block to find
@@ -810,8 +813,8 @@ withApplicationBlock givenId =
   where
     idCheck = fmap (== givenId) . liftIO . getApplicationId
 
--- | Just like 'applicationBlock', but creates a new 'ApplicationBlock' with
--- given id if no such block can be found.
+-- | Just like 'withApplicationBlock', but creates a new 'ApplicationBlock'
+-- with given id if no such block can be found.
 
 withApplicationBlock'
   :: ApplicationId     -- ^ Application id to find
@@ -910,7 +913,7 @@ applyVacuum = do
       liftBool (iteratorDeleteBlock i)
     return Nothing
 
--- | Determine if given metadata block is empty.
+-- | Determine if a given 'Metadata' block is empty.
 
 isMetaBlockEmpty :: MonadIO m => MetadataType -> Metadata -> m Bool
 isMetaBlockEmpty SeekTableBlock block =
@@ -946,7 +949,7 @@ setModified = do
   modified <- asks metaModified
   liftIO (writeIORef modified True)
 
--- | Map 'VorbisField' to its ASCII name in form of a 'ByteString'.
+-- | Map 'VorbisField' to its ASCII name in the form of a 'ByteString'.
 
 vorbisFieldName :: VorbisField -> ByteString
 vorbisFieldName RGTrackPeak = "REPLAYGAIN_TRACK_PEAK"
@@ -955,7 +958,7 @@ vorbisFieldName RGAlbumPeak = "REPLAYGAIN_ALBUM_PEAK"
 vorbisFieldName RGAlbumGain = "REPLAYGAIN_ALBUM_GAIN"
 vorbisFieldName field = (B8.pack . fmap toUpper . show) field
 
--- | Map number of channels to a 'Set' of 'SpeakerPosition's as per FLAC
+-- | Map the number of channels to a 'Set' of 'SpeakerPosition's as per FLAC
 -- specification.
 
 toChannelMask :: Word32 -> Set SpeakerPosition

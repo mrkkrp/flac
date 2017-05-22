@@ -47,7 +47,7 @@ import Foreign.C.Types
 import qualified Data.ByteString as B
 
 -- | Create and use an 'Encoder'. The encoder is guaranteed to be freed even
--- in case of exception.
+-- in the case of exception.
 --
 -- If memory for the encoder cannot be allocated, corresponding
 -- 'EncoderException' is raised.
@@ -59,8 +59,8 @@ withEncoder f = bracket encoderNew (mapM_ encoderDelete) $ \mencoder ->
       (EncoderFailed EncoderStateMemoryAllocationError)
     Just x -> f x
 
--- | Create a new stream encoder instance with default settings. In the case
--- of memory allocation problem 'Nothing' is returned.
+-- | Create a new stream encoder instance with the default settings. In the
+-- case of memory allocation problem 'Nothing' is returned.
 
 encoderNew :: IO (Maybe Encoder)
 encoderNew = maybePtr <$> c_encoder_new
@@ -86,7 +86,7 @@ encoderSetChannels encoder channels =
 foreign import ccall unsafe "FLAC__stream_encoder_set_channels"
   c_encoder_set_channels :: Encoder -> CUInt -> IO Bool
 
--- | Set the same resolution of the input to be encoded. Return 'False' if
+-- | Set the sample resolution of the input to be encoded. Return 'False' if
 -- encoder is already initialized.
 
 encoderSetBitsPerSample :: Encoder -> Word32 -> IO Bool
@@ -223,7 +223,7 @@ encoderSetTotalSamplesEstimate = c_encoder_set_total_samples_estimate
 foreign import ccall unsafe "FLAC__stream_encoder_set_total_samples_estimate"
   c_encoder_set_total_samples_estimate :: Encoder -> Word64 -> IO Bool
 
--- | Set the “verify” flag. If true, the encoder will verify it's own
+-- | Set the “verify” flag. If 'True', the encoder will verify it's own
 -- encoded output by feeding it through an internal decoder and comparing
 -- the original signal against the decoded signal. If a mismatch occurs, the
 -- process call will return false. Note that this will slow the encoding
@@ -235,7 +235,7 @@ encoderSetVerify = c_encoder_set_verify
 foreign import ccall unsafe "FLAC__stream_encoder_set_verify"
   c_encoder_set_verify :: Encoder -> Bool -> IO Bool
 
--- | Get current encoder state.
+-- | Get the current encoder state.
 
 encoderGetState :: Encoder -> IO EncoderState
 encoderGetState = fmap toEnum' . c_encoder_get_state

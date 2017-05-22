@@ -17,7 +17,12 @@
 * [License](#license)
 
 This is a complete high-level Haskell binding
-to [libFLAC](https://xiph.org/flac/).
+to [libFLAC](https://xiph.org/flac/)—reference FLAC implementation.
+
+> As the maintainer of the C FLAC code base, I must say I'm impressed. Quite
+> honestly, I think the C API is horrible.
+>
+> —[Erik de Castro Lopo](https://www.reddit.com/r/haskell/comments/5lyk70/announcing_flac_a_complete_highlevel_binding_to/dc00yb7/)
 
 ## Aims of the project
 
@@ -31,8 +36,7 @@ Here are several ideas the project follows:
   supported by this package. This is in the hope to prevent fragmentation
   and proliferation of different libraries to work with FLAC with each of
   them covering only some 80% of functionality the library author needed and
-  neglecting other 20%. A lot of effort was put to make the first libFLAC
-  binding so good so you don't need another one.
+  neglecting other 20%.
 
 * Be as efficient as the underlying C implementation, avoid adding any sort
   of overhead (memory/speed/or otherwise).
@@ -54,24 +58,24 @@ audio metadata, but it does not support a lot of FLAC-specific things I'd
 love to manipulate. We
 have [`hsndfile`](https://hackage.haskell.org/package/hsndfile), but I don't
 really want to read FLAC data into a buffer or Haskell `Vector`. How simple
-it is (if possible) to decode a FLAC file using that library? How simple it
-is to figure out where to begin with such a task? With `flac` it's
-`decodeFlac def "myfile.flac" "myfile.wav"` — done, average song in a
-fraction of second.
+is it (if possible) to decode a FLAC file using that library? How simple is
+it to figure out where to begin with such a task? With `flac` it's
+`decodeFlac def "myfile.flac" "myfile.wav"`—done, average song in a fraction
+of second.
 
 ## Provided functionality
 
 Here we go:
 
-* Metadata — full support for reading/writing/deleting of all audio
+* Metadata—full support for reading/writing/deleting of all audio
   parameters, application data, seek tables, vorbis comments of all sorts,
   CUE sheets, and even pictures.
 
-* Stream decoder — simple interface for decoding to vanilla WAVE and RF64
+* Stream decoder—simple interface for decoding to vanilla WAVE and RF64
   (support for files larger than 4 Gb).
 
-* Stream encoder — a lot of options to tweak, everything that libFLAC has,
-  but you can also use `def` and just encode vanilla WAVE or RF64 file into
+* Stream encoder—a lot of options to tweak, everything that libFLAC has, but
+  you can also use `def` and just encode vanilla WAVE or RF64 file into
   native FLAC. Simple and efficient.
 
 ## Limitations
@@ -83,7 +87,7 @@ Right now there are three main limitations:
 
 * It's not possible to use custom callbacks for printing decoding/encoding
   progress in real-time and stuff like that. Not a big issue IMO, given that
-  we get easy and safe API instead.
+  we get nice and safe API instead.
 
 * Only works on little-endian architectures so far, I'll accept a PR lifting
   this limitation.
@@ -92,21 +96,20 @@ Right now there are three main limitations:
 
 The best way to start using `flac` is to take a look
 at [the Haddocks](https://hackage.haskell.org/package/flac). Encoding and
-decoding is so simple that a baby could handle it, and for metadata there
-are examples and a lot of details in the docs. Feel free to ask me question
-if you get stuck with something though.
+decoding are so simple that even a baby could handle it, and for metadata
+there are examples and a lot of details in the docs. Feel free to ask me a
+question if you get stuck with something though.
 
 ## Related packages
 
 The following packages are designed to be used with `flac`:
 
-* [`flac-picture`](https://hackage.haskell.org/package/flac-picture) — add
+* [`flac-picture`](https://hackage.haskell.org/package/flac-picture)—add
   pictures to FLAC metadata easier.
 
 ## Contribution
 
-Please kindly direct all issues, bugs, and questions
-to
+Please kindly direct all issues, bugs, and questions to
 [the GitHub issue tracker for this project](https://github.com/mrkkrp/flac/issues).
 
 Pull requests are also welcome and will be reviewed quickly.

@@ -28,7 +28,7 @@ import Data.Word
 import Foreign.C.Types
 
 -- | Create and use a 'Decoder'. The decoder is guaranteed to be freed even
--- in case of exception.
+-- in the case of exception.
 --
 -- If memory for the encoder cannot be allocated, corresponding
 -- 'DecoderException' is raised.
@@ -40,8 +40,8 @@ withDecoder f = bracket decoderNew (mapM_ decoderDelete) $ \mdecoder ->
       (DecoderFailed DecoderStateMemoryAllocationError)
     Just x -> f x
 
--- | Create a new stream decoder instance with default settings. In the case
--- of memory allocation problem 'Nothing' is returned.
+-- | Create a new stream decoder instance with the default settings. In the
+-- case of memory allocation problem 'Nothing' is returned.
 
 decoderNew :: IO (Maybe Decoder)
 decoderNew = maybePtr <$> c_decoder_new
@@ -59,7 +59,7 @@ foreign import ccall unsafe "FLAC__stream_decoder_delete"
 
 -- | Set MD5 signature checking. If 'True' the decoder will compute the MD5
 -- signature of the unencoded audio data while decoding and compare it to
--- the signature from the stream info block
+-- the signature from the stream info block.
 
 decoderSetMd5Checking :: Decoder -> Bool -> IO Bool
 decoderSetMd5Checking = c_decoder_set_md5_checking
@@ -67,7 +67,7 @@ decoderSetMd5Checking = c_decoder_set_md5_checking
 foreign import ccall unsafe "FLAC__stream_decoder_set_md5_checking"
   c_decoder_set_md5_checking :: Decoder -> Bool -> IO Bool
 
--- | Get current decoder state.
+-- | Get the current decoder state.
 
 decoderGetState :: Decoder -> IO DecoderState
 decoderGetState = fmap toEnum' . c_decoder_get_state
@@ -75,7 +75,7 @@ decoderGetState = fmap toEnum' . c_decoder_get_state
 foreign import ccall unsafe "FLAC__stream_decoder_get_state"
   c_decoder_get_state :: Decoder -> IO CUInt
 
--- | Get frame size as number of inter-channel samples of last decoded
+-- | Get frame size as a number of inter-channel samples of last decoded
 -- frame.
 
 decoderGetBlockSize :: Decoder -> IO Word32
@@ -92,7 +92,7 @@ decoderProcessSingle = c_decoder_process_single
 foreign import ccall unsafe "FLAC__stream_decoder_process_single"
   c_decoder_process_single :: Decoder -> IO Bool
 
--- | Decode until the end of the metadata. We use this to skip to audio
+-- | Decode until the end of the metadata. We use this to skip to the audio
 -- stream.
 
 decoderProcessUntilEndOfMetadata :: Decoder -> IO Bool
@@ -102,7 +102,7 @@ foreign import ccall unsafe "FLAC__stream_decoder_process_until_end_of_metadata"
   c_decoder_process_until_end_of_metadata :: Decoder -> IO Bool
 
 -- | Finish the decoding process and release resources (also resets decoder
--- and its settings). Return 'False' in case of trouble.
+-- and its settings). Return 'False' in the case of trouble.
 
 decoderFinish :: Decoder -> IO Bool
 decoderFinish = c_decoder_finish

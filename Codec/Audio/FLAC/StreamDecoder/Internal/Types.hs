@@ -21,7 +21,7 @@ import Control.Exception
 import Data.Void
 import Foreign
 
--- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
+-- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent
 -- point to decoder instance.
 
 newtype Decoder = Decoder (Ptr Void)

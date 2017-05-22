@@ -17,14 +17,14 @@
 --
 -- === Low-level details
 --
--- The implementation uses the reference implementation of FLAC — libFLAC (C
+-- The implementation uses the reference implementation of FLAC—libFLAC (C
 -- library) under the hood. This means you'll need at least version 1.3.0 of
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
--- The binding works with minimal overhead compared to pure C
--- implementation. Decoding speed is equal to that of @flac@ command line
--- tool. Memory consumption is minimal and remains constant regardless of
--- size of file to decode.
+-- The binding works with minimal overhead compared to the C implementation.
+-- Decoding speed is equal to that of @flac@ command line tool. Memory
+-- consumption is minimal and remains constant regardless of the size of
+-- file to decode.
 
 {-# LANGUAGE RecordWildCards #-}
 
@@ -53,7 +53,7 @@ import Foreign
 import System.Directory
 import System.IO
 
--- | Parameters of stream decoder.
+-- | Parameters of the stream decoder.
 
 data DecoderSettings = DecoderSettings
   { decoderMd5Checking :: !Bool
@@ -127,7 +127,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
 -- Helpers
 
 -- | Execute an initializing action that returns 'False' on failure and take
--- care of error reporting. In case of trouble, @'DecoderInitFailed'
+-- care of error reporting. In the case of trouble, @'DecoderInitFailed'
 -- 'DecoderInitStatusAlreadyInitialized'@ is thrown.
 
 liftInit :: IO Bool -> IO ()
@@ -136,13 +136,13 @@ liftInit m = liftIO m >>= bool t (return ())
     t = throwIO (DecoderInitFailed DecoderInitStatusAlreadyInitialized)
 
 -- | Execute an action that returns 'False' on failure into taking care of
--- error reporting. In case of trouble @'EncoderFailed'@ with encoder status
--- attached is thrown.
+-- error reporting. In the case of trouble @'EncoderFailed'@ with encoder
+-- status attached is thrown.
 
 liftBool :: Decoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
--- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
+-- | Get 'DecoderState' from a given 'Decoder' and throw it immediately.
 
 throwState :: Decoder -> IO a
 throwState = decoderGetState >=> throwIO . DecoderFailed

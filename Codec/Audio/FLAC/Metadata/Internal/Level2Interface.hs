@@ -7,8 +7,8 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Low-level Haskell wrapper around C functions to work with level 2 FLAC
--- metadata interface, see:
+-- Low-level Haskell wrapper around C functions to work with the level 2
+-- FLAC metadata interface, see:
 --
 -- <https://xiph.org/flac/api/group__flac__metadata__level2.html>.
 
@@ -43,7 +43,7 @@ import Prelude hiding (iterate)
 -- Chain
 
 -- | Create and use a 'MetaChain' (metadata chain). The chain is guaranteed
--- to be freed even in case of exception.
+-- to be freed even in the case of exception thrown.
 --
 -- If memory for the chain cannot be allocated, corresponding
 -- 'MetaException' is raised.
@@ -64,7 +64,8 @@ chainNew = maybePtr <$> c_chain_new
 foreign import ccall unsafe "FLAC__metadata_chain_new"
   c_chain_new :: IO MetaChain
 
--- | Free a chain instance. Deletes the object pointed to by chain.
+-- | Free a 'MetaChain' instance. Delete the object pointed to by
+-- 'MetaChain'.
 
 chainDelete :: MetaChain -> IO ()
 chainDelete = c_chain_delete
@@ -72,8 +73,8 @@ chainDelete = c_chain_delete
 foreign import ccall unsafe "FLAC__metadata_chain_delete"
   c_chain_delete :: MetaChain -> IO ()
 
--- | Check status of given 'MetaChain'. This can be used to find out what
--- went wrong. Also resets status to 'MetaChainStatusOK'.
+-- | Check status of a given 'MetaChain'. This can be used to find out what
+-- went wrong. It also resets status to 'MetaChainStatusOK'.
 
 chainStatus :: MetaChain -> IO MetaChainStatus
 chainStatus = fmap toEnum' . c_chain_status
@@ -109,7 +110,7 @@ foreign import ccall unsafe "FLAC__metadata_chain_write"
 -- on the current chain will become invalid after this call. You should
 -- delete the iterator and get a new one.
 --
--- Note: this function does not write to the FLAC file, it only modifies the
+-- NOTE: this function does not write to the FLAC file, it only modifies the
 -- chain.
 
 chainSortPadding :: MetaChain -> IO ()
@@ -124,7 +125,7 @@ foreign import ccall unsafe "FLAC__metadata_chain_sort_padding"
 -- | Traverse all metadata blocks from beginning to end collecting 'Just'
 -- values and possibly performing some actions. This is the only way to
 -- traverse metadata chain and get access to 'MetaIterator' and by exporting
--- only this, we eliminate certain class of possible errors making finding
+-- only this, we eliminate a certain class of possible errors making finding
 -- and traversing metadata blocks always correct and safe.
 --
 -- If memory for the iterator cannot be allocated, corresponding
@@ -164,7 +165,7 @@ iteratorNew = maybePtr <$> c_iterator_new
 foreign import ccall unsafe "FLAC__metadata_iterator_new"
   c_iterator_new :: IO MetaIterator
 
--- | Free an iterator instance. Deletes the object pointed to by
+-- | Free an iterator instance. Delete the object pointed to by
 -- 'MetaIterator'.
 
 iteratorDelete :: MetaIterator -> IO ()
@@ -211,8 +212,8 @@ iteratorGetBlock = c_iterator_get_block
 foreign import ccall unsafe "FLAC__metadata_iterator_get_block"
   c_iterator_get_block :: MetaIterator -> IO Metadata
 
--- | Write given 'Metadata' block at position pointed to by 'MetaIterator'
--- replacing existing block.
+-- | Write given 'Metadata' block at the position pointed to by
+-- 'MetaIterator' replacing an existing block.
 
 iteratorSetBlock :: MetaIterator -> Metadata -> IO Bool
 iteratorSetBlock = c_iterator_set_block

@@ -37,16 +37,17 @@ import Foreign
 import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
 
--- | An opaque newtype wrapper around 'Ptr' 'Void', serves to represent
--- pointer to metadata chain.
+-- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent a
+-- pointer to a metadata chain.
 
 newtype MetaChain = MetaChain (Ptr Void)
 
--- | Same as 'MetaChain', this one for pointer to metadata iterator.
+-- | The same as 'MetaChain', this one is for pointers to metadata iterator.
 
 newtype MetaIterator = MetaIterator (Ptr Void)
 
--- | Same as 'MetaChain', this one for pointer to metadata structure itself.
+-- | The same as 'MetaChain', this one for pointers to metadata structure
+-- itself.
 
 newtype Metadata = Metadata (Ptr Void)
 
@@ -105,8 +106,8 @@ data MetaChainStatus
     -- ^ Should not ever happen when you use this binding.
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
--- | Exception that is thrown when manipulation of FLAC metadata fails for
--- some reason.
+-- | The exception that is thrown when manipulation of FLAC metadata fails
+-- for some reason.
 
 data MetaException
   = MetaGeneralProblem MetaChainStatus
@@ -126,8 +127,8 @@ instance Exception MetaException
 -- | A normalizing wrapper around 'ByteString' that makes sure that the
 -- 'ByteString' inside is a valid FLAC application name. You can create
 -- values of this type using Haskell string literals with
--- @OverloadedStrings@ or with 'mkApplicationId'. Extract the inner
--- 'ByteString' with 'unApplicationId'.
+-- @OverloadedStrings@ or with the 'mkApplicationId' smart constructor.
+-- Extract the inner 'ByteString' with 'unApplicationId'.
 
 newtype ApplicationId = ApplicationId ByteString
   deriving (Eq, Ord)
@@ -151,7 +152,7 @@ mkApplicationId appId = ApplicationId $
 unApplicationId :: ApplicationId -> ByteString
 unApplicationId (ApplicationId appId) = appId
 
--- | The datatype represents a single point in a seek table metadata block.
+-- | Single point in a seek table metadata block.
 
 data SeekPoint = SeekPoint
   { seekPointSampleNumber :: !Word64
@@ -163,8 +164,8 @@ data SeekPoint = SeekPoint
     -- ^ The number of samples in the target frame
   } deriving (Eq, Ord, Show, Read)
 
--- | The data type represents CUE sheet as stored in FLAC metadata. This
--- differs from traditional CUE sheets stored in “.cue” files (see
+-- | CUE sheet as stored in FLAC metadata. This differs from traditional CUE
+-- sheets stored in “.cue” files (see
 -- <https://hackage.haskell.org/package/cue-sheet> to work with those).
 
 data CueSheetData = CueSheetData
@@ -192,10 +193,10 @@ data CueSheetData = CueSheetData
   , cueTracks :: ![CueTrack]
     -- ^ Collection of actual tracks in the CUE sheet, see 'CueTrack'.
   , cueLeadOutTrack :: !CueTrack
-    -- ^ The obligatory lead-out track, will be written with index 170.
+    -- ^ The obligatory lead-out track, will be written with the index 170.
   } deriving (Eq, Ord, Show, Read)
 
--- | Data type representing a single track is CUE sheet.
+-- | Single track in a CUE sheet.
 
 data CueTrack = CueTrack
   { cueTrackOffset :: !Word64
@@ -226,7 +227,7 @@ data CueTrack = CueTrack
   } deriving (Eq, Ord, Show, Read)
 
 -- | Type of picture FLAC metadata can contain. There may be several
--- metadata blocks containing pictures of different “types”.
+-- metadata blocks containing pictures of different types.
 
 data PictureType
   = PictureOther             -- ^ Other
