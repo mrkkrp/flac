@@ -9,6 +9,8 @@
 --
 -- Random non-public helpers.
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module Codec.Audio.FLAC.Util
   ( maybePtr
   , toEnum'
@@ -19,13 +21,13 @@ module Codec.Audio.FLAC.Util
 where
 
 import Control.Exception
+import Data.Coerce
 import Data.Text (Text)
 import Foreign
 import Foreign.C.String
 import System.Directory
 import System.FilePath
 import System.IO
-import Unsafe.Coerce
 import qualified Data.ByteString    as B
 import qualified Data.Text          as T
 import qualified Data.Text.Encoding as T
@@ -34,10 +36,10 @@ import qualified Data.Text.Encoding as T
 -- it is, otherwise return the given pointer unchanged. Needless to say that
 -- this thing is unsafe.
 
-maybePtr :: a -> Maybe a
+maybePtr :: Coercible a (Ptr p) => a -> Maybe a
 maybePtr a
-  | unsafeCoerce a == nullPtr = Nothing
-  | otherwise                 = Just a
+  | coerce a == nullPtr = Nothing
+  | otherwise           = Just a
 
 -- | A version of 'toEnum' that converts from any 'Integral' type.
 
