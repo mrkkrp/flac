@@ -264,7 +264,7 @@ class MetaValue a where
 
   -- | Type of data that corresponds to this metadata value. For example
   -- 'SampleRate' is represented by 'Word32' value in this library, and so
-  -- @'MetaType' 'SampleRate' = 'Word32'@.
+  -- @'MetaType' 'SampleRate' ~ 'Word32'@.
 
   type MetaType a :: *
 
