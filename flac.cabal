@@ -34,7 +34,7 @@ library
                     , containers       >= 0.5    && < 0.6
                     , data-default-class
                     , directory        >= 1.2.2  && < 1.4
-                    , exceptions       >= 0.6    && < 0.9
+                    , exceptions       >= 0.6    && < 0.10
                     , filepath         >= 1.2    && < 1.5
                     , mtl              >= 2.0    && < 3.0
                     , text             >= 0.2    && < 1.3
