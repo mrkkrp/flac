@@ -5,7 +5,6 @@
 [![Stackage Nightly](http://stackage.org/package/flac/badge/nightly)](http://stackage.org/nightly/package/flac)
 [![Stackage LTS](http://stackage.org/package/flac/badge/lts)](http://stackage.org/lts/package/flac)
 [![Build Status](https://travis-ci.org/mrkkrp/flac.svg?branch=master)](https://travis-ci.org/mrkkrp/flac)
-[![Coverage Status](https://coveralls.io/repos/mrkkrp/flac/badge.svg?branch=master&service=github)](https://coveralls.io/github/mrkkrp/flac?branch=master)
 
 * [Aims of the project](#aims-of-the-project)
 * [Motivation](#motivation)
