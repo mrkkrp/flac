@@ -9,6 +9,8 @@
 --
 -- Wrappers around helpers written to help work with the stream decoder.
 
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 module Codec.Audio.FLAC.StreamDecoder.Internal.Helpers
   ( decoderInitHelper )
 where
