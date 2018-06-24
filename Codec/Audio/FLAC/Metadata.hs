@@ -141,7 +141,6 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Foreign hiding (void)
 import Numeric.Natural
-import Prelude hiding (iterate)
 import System.IO
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE

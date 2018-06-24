@@ -14,6 +14,7 @@
 
 {-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE LambdaCase               #-}
 
 module Codec.Audio.FLAC.Metadata.Internal.Level2Interface
   ( -- * Chain
@@ -37,7 +38,6 @@ import Control.Monad.Catch
 import Control.Monad.IO.Class (MonadIO (..))
 import Foreign.C.String
 import Foreign.C.Types
-import Prelude hiding (iterate)
 
 ----------------------------------------------------------------------------
 -- Chain
@@ -49,11 +49,10 @@ import Prelude hiding (iterate)
 -- 'MetaException' is raised.
 
 withChain :: (MetaChain -> IO a) -> IO a
-withChain f = bracket chainNew (mapM_ chainDelete) $ \mchain ->
-  case mchain of
-    Nothing -> throwM
-      (MetaGeneralProblem MetaChainStatusMemoryAllocationError)
-    Just x -> f x
+withChain f = bracket chainNew (mapM_ chainDelete) $ \case
+  Nothing -> throwM
+    (MetaGeneralProblem MetaChainStatusMemoryAllocationError)
+  Just x -> f x
 
 -- | Create a new 'MetaChain'. In the case of memory allocation problem
 -- 'Nothing' is returned.

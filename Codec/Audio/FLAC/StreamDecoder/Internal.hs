@@ -10,6 +10,7 @@
 -- Low-level Haskell wrapper around FLAC stream decoder API.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE LambdaCase               #-}
 
 module Codec.Audio.FLAC.StreamDecoder.Internal
   ( withDecoder
@@ -34,11 +35,10 @@ import Foreign.C.Types
 -- 'DecoderException' is raised.
 
 withDecoder :: (Decoder -> IO a) -> IO a
-withDecoder f = bracket decoderNew (mapM_ decoderDelete) $ \mdecoder ->
-  case mdecoder of
-    Nothing -> throwM
-      (DecoderFailed DecoderStateMemoryAllocationError)
-    Just x -> f x
+withDecoder f = bracket decoderNew (mapM_ decoderDelete) $ \case
+  Nothing -> throwM
+    (DecoderFailed DecoderStateMemoryAllocationError)
+  Just x -> f x
 
 -- | Create a new stream decoder instance with the default settings. In the
 -- case of memory allocation problem 'Nothing' is returned.

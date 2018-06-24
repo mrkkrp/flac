@@ -12,6 +12,7 @@
 -- <https://xiph.org/flac/api/group__flac__stream__encoder.html>
 
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE LambdaCase               #-}
 
 module Codec.Audio.FLAC.StreamEncoder.Internal
   ( withEncoder
@@ -53,11 +54,10 @@ import qualified Data.ByteString as B
 -- 'EncoderException' is raised.
 
 withEncoder :: (Encoder -> IO a) -> IO a
-withEncoder f = bracket encoderNew (mapM_ encoderDelete) $ \mencoder ->
-  case mencoder of
-    Nothing -> throwM
-      (EncoderFailed EncoderStateMemoryAllocationError)
-    Just x -> f x
+withEncoder f = bracket encoderNew (mapM_ encoderDelete) $ \case
+  Nothing -> throwM
+    (EncoderFailed EncoderStateMemoryAllocationError)
+  Just x -> f x
 
 -- | Create a new stream encoder instance with the default settings. In the
 -- case of memory allocation problem 'Nothing' is returned.

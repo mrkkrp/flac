@@ -285,10 +285,8 @@ getVorbisComment name block = alloca $ \sizePtr ->
     commentSize <- fromIntegral <$> peek sizePtr
     if commentPtr == nullPtr
       then return Nothing
-      else do
-        value <- T.drop 1 . T.dropWhile (/= '=') . T.decodeUtf8
-          <$> B.packCStringLen (commentPtr, commentSize)
-        return (pure value)
+      else Just . T.drop 1 . T.dropWhile (/= '=') . T.decodeUtf8
+        <$> B.packCStringLen (commentPtr, commentSize)
 
 foreign import ccall unsafe "FLAC__metadata_get_vorbis_comment"
   c_get_vorbis_comment :: Metadata -> CString -> Ptr Word32 -> IO CString
