@@ -10,7 +10,6 @@ import Codec.Audio.Wave
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
-import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Vector (Vector)
 import System.Directory
@@ -356,6 +355,11 @@ spec = around withSandbox $ do
 
 ----------------------------------------------------------------------------
 -- Helpers
+
+-- | A shortcut for 'defaultMetaSettings'.
+
+def :: MetaSettings
+def = defaultMetaSettings
 
 infix 1 `shouldBe`, `shouldReturn`
 

@@ -30,6 +30,7 @@
 
 module Codec.Audio.FLAC.StreamDecoder
   ( DecoderSettings (..)
+  , defaultDecoderSettings
   , DecoderException (..)
   , DecoderInitStatus (..)
   , DecoderState (..)
@@ -46,7 +47,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bool (bool)
-import Data.Default.Class
 import Data.Function
 import Data.IORef
 import Foreign
@@ -67,10 +67,15 @@ data DecoderSettings = DecoderSettings
     -- 'WaveVanilla'.
   } deriving (Show, Read, Eq, Ord)
 
-instance Default DecoderSettings where
-  def = DecoderSettings
-    { decoderMd5Checking = False
-    , decoderWaveFormat  = WaveVanilla }
+-- | Default 'DecoderSettings'.
+--
+-- @since 0.2.0
+
+defaultDecoderSettings :: DecoderSettings
+defaultDecoderSettings = DecoderSettings
+  { decoderMd5Checking = False
+  , decoderWaveFormat  = WaveVanilla
+  }
 
 -- | Decode a FLAC file to WAVE.
 --
@@ -86,7 +91,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
   liftInit (decoderSetMd5Checking d decoderMd5Checking)
-  (maxBlockSize, wave) <- runFlacMeta def ipath $ do
+  (maxBlockSize, wave) <- runFlacMeta defaultMetaSettings ipath $ do
     let waveFileFormat   = decoderWaveFormat
         waveDataOffset   = 0
         waveDataSize     = 0
