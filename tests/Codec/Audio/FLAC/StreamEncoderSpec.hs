@@ -9,7 +9,6 @@ import Codec.Audio.FLAC.StreamEncoder
 import Codec.Audio.Wave
 import Control.Monad
 import Data.ByteString (ByteString)
-import Data.Default.Class
 import System.Directory
 import System.FilePath
 import System.IO
@@ -32,9 +31,11 @@ spec =
         old <- Blind <$> fetchWaveBody path
         -- We first let the built-in verification mechanics catch possible
         -- errors.
-        encodeFlac def { encoderVerify = True } path path
+        encodeFlac defaultEncoderSettings
+          { encoderVerify = True } path path
         -- Then we let decoder check that the streams match with MD5 hash.
-        decodeFlac def { decoderMd5Checking = True } path path
+        decodeFlac defaultDecoderSettings
+          { decoderMd5Checking = True } path path
         -- But we also want to be sure that audio streams match
         -- byte-by-byte, we can't trust just FLAC's own checking.
         new <- Blind <$> fetchWaveBody path

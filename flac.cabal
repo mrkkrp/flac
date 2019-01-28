@@ -32,7 +32,6 @@ library
   build-depends:      base             >= 4.8    && < 5.0
                     , bytestring       >= 0.2    && < 0.11
                     , containers       >= 0.5    && < 0.7
-                    , data-default-class
                     , directory        >= 1.2.2  && < 1.4
                     , exceptions       >= 0.6    && < 0.11
                     , filepath         >= 1.2    && < 1.5
@@ -68,7 +67,7 @@ library
     ghc-options:      -Wall -Werror -fsimpl-tick-factor=150
   else
     ghc-options:      -O2 -Wall -fsimpl-tick-factor=150
- if flag(dev) && impl(ghc >= 8.0)
+  if flag(dev) && impl(ghc >= 8.0)
     ghc-options:      -Wcompat
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
@@ -84,7 +83,6 @@ test-suite tests
   type:               exitcode-stdio-1.0
   build-depends:      base             >= 4.8    && < 5.0
                     , bytestring       >= 0.2    && < 0.11
-                    , data-default-class
                     , directory        >= 1.2.2  && < 1.4
                     , filepath         >= 1.2    && < 1.5
                     , flac

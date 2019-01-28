@@ -30,6 +30,7 @@
 
 module Codec.Audio.FLAC.StreamEncoder
   ( EncoderSettings (..)
+  , defaultEncoderSettings
   , EncoderException (..)
   , EncoderInitStatus (..)
   , EncoderState (..)
@@ -45,7 +46,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.Bool (bool)
-import Data.Default.Class
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word
 import System.Directory
@@ -109,19 +109,24 @@ data EncoderSettings = EncoderSettings
     -- use the best. Default: 'Nothing'.
   } deriving (Show, Read, Eq, Ord)
 
-instance Default EncoderSettings where
-  def = EncoderSettings
-    { encoderCompression               = 5
-    , encoderBlockSize                 = 0
-    , encoderVerify                    = False
-    , encoderDoMidSideStereo           = Nothing
-    , encoderLooseMidSideStereo        = Nothing
-    , encoderApodization               = Nothing
-    , encoderMaxLpcOrder               = Nothing
-    , encoderQlpCoeffPrecision         = Nothing
-    , encoderDoQlpCoeffPrecisionSearch = Nothing
-    , encoderDoExhaustiveModelSearch   = Nothing
-    , encoderResidualPartitionOrders   = Nothing }
+-- | Default 'EncoderSettings'.
+--
+-- @since 0.2.0
+
+defaultEncoderSettings :: EncoderSettings
+defaultEncoderSettings = EncoderSettings
+  { encoderCompression = 5
+  , encoderBlockSize = 0
+  , encoderVerify = False
+  , encoderDoMidSideStereo = Nothing
+  , encoderLooseMidSideStereo = Nothing
+  , encoderApodization = Nothing
+  , encoderMaxLpcOrder = Nothing
+  , encoderQlpCoeffPrecision = Nothing
+  , encoderDoQlpCoeffPrecisionSearch = Nothing
+  , encoderDoExhaustiveModelSearch = Nothing
+  , encoderResidualPartitionOrders = Nothing
+  }
 
 -- | Encode a WAVE file or RF64 file to native FLAC.
 --

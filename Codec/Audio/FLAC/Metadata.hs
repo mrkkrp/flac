@@ -77,6 +77,7 @@ module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
     FlacMeta
   , MetaSettings (..)
+  , defaultMetaSettings
   , MetaException (..)
   , MetaChainStatus (..)
   , runFlacMeta
@@ -132,7 +133,6 @@ import Control.Monad.Reader
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Char (toUpper)
-import Data.Default.Class
 import Data.IORef
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
@@ -208,12 +208,17 @@ data MetaSettings = MetaSettings
     -- Default value: 'True'.
   } deriving (Show, Read, Eq, Ord)
 
-instance Default MetaSettings where
-  def = MetaSettings
-    { metaAutoVacuum        = True
-    , metaSortPadding       = True
-    , metaUsePadding        = True
-    , metaPreserveFileStats = True }
+-- | Default 'MetaSettings'.
+--
+-- @since 0.2.0
+
+defaultMetaSettings :: MetaSettings
+defaultMetaSettings = MetaSettings
+  { metaAutoVacuum        = True
+  , metaSortPadding       = True
+  , metaUsePadding        = True
+  , metaPreserveFileStats = True
+  }
 
 -- | Run an action that manipulates FLAC metadata. 'MetaSettings' control
 -- subtle and rather low-level details of metadata editing, just pass 'def'
