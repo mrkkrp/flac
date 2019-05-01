@@ -1,7 +1,7 @@
 name:                 flac
 version:              0.2.0
 cabal-version:        1.18
-tested-with:          GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
+tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.4, GHC==8.6.5
 license:              BSD3
 license-file:         LICENSE.md
 author:               Mark Karpov <markkarpov92@gmail.com>
@@ -29,7 +29,7 @@ flag dev
   default:            False
 
 library
-  build-depends:      base             >= 4.8    && < 5.0
+  build-depends:      base             >= 4.9    && < 5.0
                     , bytestring       >= 0.2    && < 0.11
                     , containers       >= 0.5    && < 0.7
                     , directory        >= 1.2.2  && < 1.4
@@ -40,8 +40,6 @@ library
                     , transformers     >= 0.4    && < 0.6
                     , vector           >= 0.10   && < 0.13
                     , wave             >= 0.1.2  && < 0.3
-  if !impl(ghc >= 8.0)
-    build-depends:    semigroups       == 0.18.*
   extra-libraries:    FLAC
   exposed-modules:    Codec.Audio.FLAC.Metadata
                     , Codec.Audio.FLAC.Metadata.CueSheet
@@ -67,7 +65,7 @@ library
     ghc-options:      -Wall -Werror -fsimpl-tick-factor=150
   else
     ghc-options:      -O2 -Wall -fsimpl-tick-factor=150
-  if flag(dev) && impl(ghc >= 8.0)
+  if flag(dev)
     ghc-options:      -Wcompat
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
@@ -81,7 +79,7 @@ test-suite tests
                     , Codec.Audio.FLAC.StreamEncoderSpec
   hs-source-dirs:     tests
   type:               exitcode-stdio-1.0
-  build-depends:      base             >= 4.8    && < 5.0
+  build-depends:      base             >= 4.9    && < 5.0
                     , bytestring       >= 0.2    && < 0.11
                     , directory        >= 1.2.2  && < 1.4
                     , filepath         >= 1.2    && < 1.5
@@ -92,8 +90,6 @@ test-suite tests
                     , vector           >= 0.10   && < 0.13
                     , wave             >= 0.1.2  && < 0.3
   build-tools:        hspec-discover   >= 2.0    && < 3.0
-  if !impl(ghc >= 8.0)
-    build-depends:    semigroups       == 0.18.*
   if flag(dev)
     ghc-options:      -Wall -Werror
   else

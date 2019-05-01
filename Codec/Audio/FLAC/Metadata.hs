@@ -66,12 +66,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeFamilies               #-}
-
-#if MIN_VERSION_base(4,9,0)
 {-# LANGUAGE UndecidableInstances       #-}
-#else
-{-# OPTIONS_GHC -fno-warn-missing-methods #-}
-#endif
 
 module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
@@ -134,25 +129,20 @@ import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Char (toUpper)
 import Data.IORef
+import Data.Kind (Constraint)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Set (Set)
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Foreign hiding (void)
+import GHC.TypeLits
 import Numeric.Natural
 import System.IO
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.List.NonEmpty    as NE
 import qualified Data.Set              as E
 import qualified Data.Vector           as V
-
-#if MIN_VERSION_base(4,9,0)
-import Data.Kind (Constraint)
-import GHC.TypeLits
-#else
-import GHC.Exts (Constraint)
-#endif
 
 ----------------------------------------------------------------------------
 -- Metadata manipulation API
@@ -295,9 +285,7 @@ class MetaValue a where
 
 infix 1 =->
 
-#if MIN_VERSION_base(4,9,0)
 type NotWritable = 'Text "This attribute is not writable."
-#endif
 
 -- | Minimal block size in samples used in the stream.
 --
@@ -307,9 +295,7 @@ data MinBlockSize = MinBlockSize
 
 instance MetaValue MinBlockSize where
   type MetaType MinBlockSize = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable MinBlockSize = TypeError NotWritable
-#endif
   retrieve MinBlockSize = inStreamInfo getMinBlockSize
 
 -- | Maximal block size in samples used in the stream. Equality of minimum
@@ -321,9 +307,7 @@ data MaxBlockSize = MaxBlockSize
 
 instance MetaValue MaxBlockSize where
   type MetaType MaxBlockSize = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable MaxBlockSize = TypeError NotWritable
-#endif
   retrieve MaxBlockSize = inStreamInfo getMaxBlockSize
 
 -- | Minimal frame size in bytes used in the stream. May be 0 to imply the
@@ -335,9 +319,7 @@ data MinFrameSize = MinFrameSize
 
 instance MetaValue MinFrameSize where
   type MetaType MinFrameSize = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable MinFrameSize = TypeError NotWritable
-#endif
   retrieve MinFrameSize = inStreamInfo getMinFrameSize
 
 -- | Maximal frame size in bytes used in the stream. May be 0 to imply the
@@ -349,9 +331,7 @@ data MaxFrameSize = MaxFrameSize
 
 instance MetaValue MaxFrameSize where
   type MetaType MaxFrameSize = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable MaxFrameSize = TypeError NotWritable
-#endif
   retrieve MaxFrameSize = inStreamInfo getMaxFrameSize
 
 -- | Sample rate in Hz.
@@ -362,9 +342,7 @@ data SampleRate = SampleRate
 
 instance MetaValue SampleRate where
   type MetaType SampleRate = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable SampleRate = TypeError NotWritable
-#endif
   retrieve SampleRate = inStreamInfo getSampleRate
 
 -- | Number of channels. FLAC supports from 1 to 8 channels.
@@ -375,9 +353,7 @@ data Channels = Channels
 
 instance MetaValue Channels where
   type MetaType Channels = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable Channels = TypeError NotWritable
-#endif
   retrieve Channels = inStreamInfo getChannels
 
 -- | Channel mask specifying which speaker positions are present. This is
@@ -390,9 +366,7 @@ data ChannelMask = ChannelMask
 
 instance MetaValue ChannelMask where
   type MetaType ChannelMask = Set SpeakerPosition
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable ChannelMask = TypeError NotWritable
-#endif
   retrieve ChannelMask = toChannelMask <$> retrieve Channels
 
 -- | Bits per sample (sample depth). FLAC supports from 4 to 32 bits per
@@ -405,9 +379,7 @@ data BitsPerSample = BitsPerSample
 
 instance MetaValue BitsPerSample where
   type MetaType BitsPerSample = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable BitsPerSample = TypeError NotWritable
-#endif
   retrieve BitsPerSample = inStreamInfo getBitsPerSample
 
 -- | Total number of samples in audio stream. “Samples” means inter-channel
@@ -421,9 +393,7 @@ data TotalSamples = TotalSamples
 
 instance MetaValue TotalSamples where
   type MetaType TotalSamples = Word64
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable TotalSamples = TypeError NotWritable
-#endif
   retrieve TotalSamples = inStreamInfo getTotalSamples
 
 -- | File size in bytes.
@@ -434,9 +404,7 @@ data FileSize = FileSize
 
 instance MetaValue FileSize where
   type MetaType FileSize = Natural
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable FileSize = TypeError NotWritable
-#endif
   retrieve FileSize = FlacMeta (asks metaFileSize)
 
 -- | Bit rate in kilo-bits per second (kbps).
@@ -447,9 +415,7 @@ data BitRate = BitRate
 
 instance MetaValue BitRate where
   type MetaType BitRate = Word32
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable BitRate = TypeError NotWritable
-#endif
   retrieve BitRate = do
     fileSize <- fromIntegral <$> retrieve FileSize
     duration <- retrieve Duration
@@ -466,9 +432,7 @@ data MD5Sum = MD5Sum
 
 instance MetaValue MD5Sum where
   type MetaType MD5Sum = ByteString
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable MD5Sum = TypeError NotWritable
-#endif
   retrieve MD5Sum = inStreamInfo getMd5Sum
 
 -- | Duration in seconds.
@@ -479,9 +443,7 @@ data Duration = Duration
 
 instance MetaValue Duration where
   type MetaType Duration = Double
-#if MIN_VERSION_base(4,9,0)
   type MetaWritable Duration = TypeError NotWritable
-#endif
   retrieve Duration = do
     totalSamples <- fromIntegral <$> retrieve TotalSamples
     sampleRate   <- fromIntegral <$> retrieve SampleRate
