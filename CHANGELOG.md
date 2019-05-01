@@ -1,3 +1,7 @@
+## Unreleased
+
+* Dropped support for GHC 7.10.
+
 ## FLAC 0.2.0
 
 * Got rid of `data-default-class` dependency. Now default values for various
