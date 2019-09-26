@@ -9,6 +9,7 @@
 --
 -- Wrappers around helpers written to help work with the stream encoder.
 
+{-# LANGUAGE CPP                      #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 
@@ -21,13 +22,16 @@ import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Data.ByteString (ByteString)
 import Data.List (intersperse)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Monoid ((<>))
 import Data.Word (Word64)
 import Foreign.C.String
 import Numeric.Natural
 import qualified Data.ByteString.Builder as BU
 import qualified Data.ByteString.Lazy    as BL
 import qualified Data.List.NonEmpty      as NE
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 -- | Encode given input file, return 'False' in case of failure.
 

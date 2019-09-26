@@ -1,6 +1,6 @@
 ## Unreleased
 
-* Dropped support for GHC 8.0 and older.
+* Dropped support for GHC 8.2 and older.
 
 ## FLAC 0.2.0
 

@@ -59,7 +59,6 @@
 -- this should not be of any concern to the end-user, as the level 2
 -- supports more functionality than the other levels.
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE ConstrainedClassMethods    #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -129,7 +128,7 @@ import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.Char (toUpper)
 import Data.IORef
-import Data.Kind (Constraint)
+import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Set (Set)
@@ -260,7 +259,7 @@ class MetaValue a where
   -- 'SampleRate' is represented by 'Word32' value in this library, and so
   -- @'MetaType' 'SampleRate' ~ 'Word32'@.
 
-  type MetaType a :: *
+  type MetaType a :: Type
 
   -- | Associated type of the kind 'Constraint' that controls whether a
   -- particular piece of metadata is writable or not.

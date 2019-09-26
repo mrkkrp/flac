@@ -9,6 +9,8 @@
 --
 -- Mostly non-public metadata-specific helper types.
 
+{-# LANGUAGE CPP #-}
+
 module Codec.Audio.FLAC.Metadata.Internal.Types
   ( MetaChain (..)
   , MetaIterator (..)
@@ -29,13 +31,16 @@ where
 import Control.Exception (Exception)
 import Data.ByteString (ByteString)
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Monoid ((<>))
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Void
 import Foreign
 import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 -- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent a
 -- pointer to a metadata chain.
