@@ -12,6 +12,7 @@
 -- The functions from this module are not safe, one only should attempt
 -- calling them when 'Metadata' contains metadata of correct type.
 
+{-# LANGUAGE CPP                      #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE RecordWildCards          #-}
@@ -62,7 +63,6 @@ import Data.Bool (bool)
 import Data.ByteString (ByteString)
 import Data.List (uncons)
 import Data.Maybe (isJust)
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Vector (Vector, (!))
 import Data.Word
@@ -76,6 +76,10 @@ import qualified Data.Text.Encoding  as T
 import qualified Data.Text.Foreign   as T
 import qualified Data.Vector         as V
 import qualified Data.Vector.Mutable as VM
+
+#if !MIN_VERSION_base(4,13,0)
+import Data.Semigroup ((<>))
+#endif
 
 ----------------------------------------------------------------------------
 -- Stream info
