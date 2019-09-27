@@ -15,8 +15,8 @@
 * [Contribution](#contribution)
 * [License](#license)
 
-This is a complete high-level Haskell binding
-to [libFLAC](https://xiph.org/flac/)—reference FLAC implementation.
+This is a complete high-level Haskell binding to
+[libFLAC](https://xiph.org/flac/)—reference FLAC implementation.
 
 > As the maintainer of the C FLAC code base, I must say I'm impressed. Quite
 > honestly, I think the C API is horrible.
@@ -64,7 +64,7 @@ of second.
 
 ## Provided functionality
 
-Here we go:
+`flac` can work with:
 
 * Metadata—full support for reading/writing/deleting of all audio
   parameters, application data, seek tables, vorbis comments of all sorts,
@@ -93,11 +93,10 @@ Right now there are three main limitations:
 
 ## Quick start
 
-The best way to start using `flac` is to take a look
-at [the Haddocks](https://hackage.haskell.org/package/flac). Encoding and
-decoding are so simple that even a baby could handle it, and for metadata
-there are examples and a lot of details in the docs. Feel free to ask me a
-question if you get stuck with something though.
+The best way to start using `flac` is to take a look at [the
+Haddocks](https://hackage.haskell.org/package/flac). Encoding and decoding
+should be simple to understand, for metadata there are examples in the docs.
+Feel free to ask me a question if you get stuck with something.
 
 ## Related packages
 
@@ -108,10 +107,10 @@ The following packages are designed to be used with `flac`:
 
 ## Contribution
 
-Please kindly direct all issues, bugs, and questions to
-[the GitHub issue tracker for this project](https://github.com/mrkkrp/flac/issues).
+Please direct all issues, bugs, and questions to [the GitHub issue tracker
+for this project](https://github.com/mrkkrp/flac/issues).
 
-Pull requests are also welcome and will be reviewed quickly.
+Pull requests are also welcome.
 
 ## License
 
