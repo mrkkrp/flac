@@ -13,8 +13,8 @@ matrix:
       addons: {apt: {packages: [cabal-install-3.0,ghc-8.4.4,libflac-dev], sources: [hvr-ghc]}}
     - env: CABALVER=3.0 GHCVER=8.6.5
       addons: {apt: {packages: [cabal-install-3.0,ghc-8.6.5,libflac-dev], sources: [hvr-ghc]}}
-    - env: CABALVER=3.0 GHCVER=8.8.2
-      addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.2,libflac-dev], sources: [hvr-ghc]}}
+    - env: CABALVER=3.0 GHCVER=8.8.3
+      addons: {apt: {packages: [cabal-install-3.0,ghc-8.8.3,libflac-dev], sources: [hvr-ghc]}}
 
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
