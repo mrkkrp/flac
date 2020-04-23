@@ -1,96 +1,113 @@
-name:                 flac
-version:              0.2.0
-cabal-version:        1.18
-tested-with:          GHC==8.6.5, GHC==8.8.3, GHC==8.10.1
-license:              BSD3
-license-file:         LICENSE.md
-author:               Mark Karpov <markkarpov92@gmail.com>
-maintainer:           Mark Karpov <markkarpov92@gmail.com>
-homepage:             https://github.com/mrkkrp/flac
-bug-reports:          https://github.com/mrkkrp/flac/issues
-category:             Codec, Audio
-synopsis:             Complete high-level binding to libFLAC
-build-type:           Simple
-description:          Complete high-level binding to libFLAC.
-extra-doc-files:      CHANGELOG.md
-                    , README.md
-extra-source-files:   cbits/*.h
-data-files:           audio-samples/sample.flac
-                    , audio-samples/*.rf64
-                    , audio-samples/*.wav
+cabal-version:      1.18
+name:               flac
+version:            0.2.0
+license:            BSD3
+license-file:       LICENSE.md
+maintainer:         Mark Karpov <markkarpov92@gmail.com>
+author:             Mark Karpov <markkarpov92@gmail.com>
+tested-with:        ghc ==8.6.5 ghc ==8.8.3 ghc ==8.10.1
+homepage:           https://github.com/mrkkrp/flac
+bug-reports:        https://github.com/mrkkrp/flac/issues
+synopsis:           Complete high-level binding to libFLAC
+description:        Complete high-level binding to libFLAC.
+category:           Codec, Audio
+build-type:         Simple
+data-files:
+    audio-samples/sample.flac
+    audio-samples/*.rf64
+    audio-samples/*.wav
+
+extra-source-files: cbits/*.h
+extra-doc-files:
+    CHANGELOG.md
+    README.md
 
 source-repository head
-  type:               git
-  location:           https://github.com/mrkkrp/flac.git
+    type:     git
+    location: https://github.com/mrkkrp/flac.git
 
 flag dev
-  description:        Turn on development settings.
-  manual:             True
-  default:            False
+    description: Turn on development settings.
+    default:     False
+    manual:      True
 
 library
-  build-depends:      base             >= 4.12   && < 5.0
-                    , bytestring       >= 0.2    && < 0.11
-                    , containers       >= 0.5    && < 0.7
-                    , directory        >= 1.2.2  && < 1.4
-                    , exceptions       >= 0.6    && < 0.11
-                    , filepath         >= 1.2    && < 1.5
-                    , mtl              >= 2.0    && < 3.0
-                    , text             >= 0.2    && < 1.3
-                    , transformers     >= 0.4    && < 0.6
-                    , vector           >= 0.10   && < 0.13
-                    , wave             >= 0.1.2  && < 0.3
-  extra-libraries:    FLAC
-  exposed-modules:    Codec.Audio.FLAC.Metadata
-                    , Codec.Audio.FLAC.Metadata.CueSheet
-                    , Codec.Audio.FLAC.StreamDecoder
-                    , Codec.Audio.FLAC.StreamEncoder
-                    , Codec.Audio.FLAC.StreamEncoder.Apodization
-  other-modules:      Codec.Audio.FLAC.Metadata.Internal.Level2Interface
-                    , Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
-                    , Codec.Audio.FLAC.Metadata.Internal.Object
-                    , Codec.Audio.FLAC.Metadata.Internal.Types
-                    , Codec.Audio.FLAC.StreamDecoder.Internal
-                    , Codec.Audio.FLAC.StreamDecoder.Internal.Helpers
-                    , Codec.Audio.FLAC.StreamDecoder.Internal.Types
-                    , Codec.Audio.FLAC.StreamEncoder.Internal
-                    , Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
-                    , Codec.Audio.FLAC.StreamEncoder.Internal.Types
-                    , Codec.Audio.FLAC.Util
-  c-sources:          cbits/metadata_level2_helpers.c
-                    , cbits/stream_decoder_helpers.c
-                    , cbits/stream_encoder_helpers.c
-  include-dirs:       cbits
-  if flag(dev)
-    ghc-options:      -Wall -Werror -fsimpl-tick-factor=150
-  else
-    ghc-options:      -O2 -Wall -fsimpl-tick-factor=150
-  if flag(dev)
-    ghc-options:      -Wcompat
-                      -Wincomplete-record-updates
-                      -Wincomplete-uni-patterns
-                      -Wnoncanonical-monad-instances
-  default-language:   Haskell2010
+    exposed-modules:
+        Codec.Audio.FLAC.Metadata
+        Codec.Audio.FLAC.Metadata.CueSheet
+        Codec.Audio.FLAC.StreamDecoder
+        Codec.Audio.FLAC.StreamEncoder
+        Codec.Audio.FLAC.StreamEncoder.Apodization
+
+    c-sources:
+        cbits/metadata_level2_helpers.c
+        cbits/stream_decoder_helpers.c
+        cbits/stream_encoder_helpers.c
+
+    other-modules:
+        Codec.Audio.FLAC.Metadata.Internal.Level2Interface
+        Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
+        Codec.Audio.FLAC.Metadata.Internal.Object
+        Codec.Audio.FLAC.Metadata.Internal.Types
+        Codec.Audio.FLAC.StreamDecoder.Internal
+        Codec.Audio.FLAC.StreamDecoder.Internal.Helpers
+        Codec.Audio.FLAC.StreamDecoder.Internal.Types
+        Codec.Audio.FLAC.StreamEncoder.Internal
+        Codec.Audio.FLAC.StreamEncoder.Internal.Helpers
+        Codec.Audio.FLAC.StreamEncoder.Internal.Types
+        Codec.Audio.FLAC.Util
+
+    default-language: Haskell2010
+    extra-libraries:  FLAC
+    include-dirs:     cbits
+    build-depends:
+        base >=4.12 && <5.0,
+        bytestring >=0.2 && <0.11,
+        containers >=0.5 && <0.7,
+        directory >=1.2.2 && <1.4,
+        exceptions >=0.6 && <0.11,
+        filepath >=1.2 && <1.5,
+        mtl >=2.0 && <3.0,
+        text >=0.2 && <1.3,
+        transformers >=0.4 && <0.6,
+        vector >=0.10 && <0.13,
+        wave >=0.1.2 && <0.3
+
+    if flag(dev)
+        ghc-options: -Wall -Werror -fsimpl-tick-factor=150
+
+    else
+        ghc-options: -O2 -Wall -fsimpl-tick-factor=150
+
+    if flag(dev)
+        ghc-options:
+            -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
+            -Wnoncanonical-monad-instances
 
 test-suite tests
-  main-is:            Spec.hs
-  other-modules:      Codec.Audio.FLAC.MetadataSpec
-                    , Codec.Audio.FLAC.StreamEncoderSpec
-  hs-source-dirs:     tests
-  type:               exitcode-stdio-1.0
-  build-depends:      base             >= 4.12   && < 5.0
-                    , bytestring       >= 0.2    && < 0.11
-                    , directory        >= 1.2.2  && < 1.4
-                    , filepath         >= 1.2    && < 1.5
-                    , flac
-                    , hspec            >= 2.0    && < 3.0
-                    , temporary        >= 1.1    && < 1.4
-                    , transformers     >= 0.4    && < 0.6
-                    , vector           >= 0.10   && < 0.13
-                    , wave             >= 0.1.2  && < 0.3
-  build-tools:        hspec-discover   >= 2.0    && < 3.0
-  if flag(dev)
-    ghc-options:      -Wall -Werror
-  else
-    ghc-options:      -O2 -Wall
-  default-language:   Haskell2010
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    build-tools:      hspec-discover >=2.0 && <3.0
+    hs-source-dirs:   tests
+    other-modules:
+        Codec.Audio.FLAC.MetadataSpec
+        Codec.Audio.FLAC.StreamEncoderSpec
+
+    default-language: Haskell2010
+    build-depends:
+        base >=4.12 && <5.0,
+        bytestring >=0.2 && <0.11,
+        directory >=1.2.2 && <1.4,
+        filepath >=1.2 && <1.5,
+        flac -any,
+        hspec >=2.0 && <3.0,
+        temporary >=1.1 && <1.4,
+        transformers >=0.4 && <0.6,
+        vector >=0.10 && <0.13,
+        wave >=0.1.2 && <0.3
+
+    if flag(dev)
+        ghc-options: -Wall -Werror
+
+    else
+        ghc-options: -O2 -Wall
