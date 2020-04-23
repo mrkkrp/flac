@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- |
 -- Module      :  Codec.Audio.FLAC.StreamEncoder
 -- Copyright   :  © 2016–present Mark Karpov
@@ -25,16 +27,14 @@
 -- Encoding speed is equal to that of @flac@ command line tool. Memory
 -- consumption is minimal and remains constant regardless of size of file to
 -- decode.
-
-{-# LANGUAGE RecordWildCards #-}
-
 module Codec.Audio.FLAC.StreamEncoder
-  ( EncoderSettings (..)
-  , defaultEncoderSettings
-  , EncoderException (..)
-  , EncoderInitStatus (..)
-  , EncoderState (..)
-  , encodeFlac )
+  ( EncoderSettings (..),
+    defaultEncoderSettings,
+    EncoderException (..),
+    EncoderInitStatus (..),
+    EncoderState (..),
+    encodeFlac,
+  )
 where
 
 import Codec.Audio.FLAC.StreamEncoder.Internal
@@ -59,47 +59,45 @@ import System.Directory
 -- specifying 'Nothing' (default), or use something specific by passing a
 -- value inside 'Just'. Thorough understanding of the FLAC format is
 -- necessary to achieve good results, though.
-
 data EncoderSettings = EncoderSettings
-  { encoderCompression :: !Word32
-    -- ^ Compression level [0..8], default is 5.
-  , encoderBlockSize :: !Word32
-    -- ^ Block size, default is 0.
-  , encoderVerify :: !Bool
-    -- ^ Verify result (slower), default is 'False'.
-  , encoderDoMidSideStereo :: !(Maybe Bool)
-    -- ^ Enable mid-side encoding on stereo input. The number of channels
+  { -- | Compression level [0..8], default is 5.
+    encoderCompression :: !Word32,
+    -- | Block size, default is 0.
+    encoderBlockSize :: !Word32,
+    -- | Verify result (slower), default is 'False'.
+    encoderVerify :: !Bool,
+    -- | Enable mid-side encoding on stereo input. The number of channels
     -- must be 2 for this to have any effect. Default value: 'Nothing'.
-  , encoderLooseMidSideStereo :: !(Maybe Bool)
-    -- ^ Set to 'True' to enable adaptive switching between mid-side and
+    encoderDoMidSideStereo :: !(Maybe Bool),
+    -- | Set to 'True' to enable adaptive switching between mid-side and
     -- left-right encoding on stereo input. Set to 'False' to use exhaustive
     -- searching. Setting this to 'True' requires 'encoderDoMidSideStereo'
     -- to also be set to 'True' in order to have any effect. Default value:
     -- 'Nothing'.
-  , encoderApodization :: !(Maybe (NonEmpty ApodizationFunction))
-    -- ^ Sets the apodization function(s) the encoder will use when
+    encoderLooseMidSideStereo :: !(Maybe Bool),
+    -- | Sets the apodization function(s) the encoder will use when
     -- windowing audio data for LPC analysis. Up to 32 functions are kept,
     -- the rest are dropped. Import
     -- "Codec.Audio.FLAC.StreamEncoder.Apodization" to bring apodization
     -- functions in scope. Default value: 'Nothing'.
-  , encoderMaxLpcOrder :: !(Maybe Word32)
-    -- ^ Set maximum LPC order, or 0 to use the fixed predictors. Default
+    encoderApodization :: !(Maybe (NonEmpty ApodizationFunction)),
+    -- | Set maximum LPC order, or 0 to use the fixed predictors. Default
     -- value: 'Nothing'.
-  , encoderQlpCoeffPrecision :: !(Maybe Word32)
-    -- ^ Set the precision in bits of the quantized linear predictor
+    encoderMaxLpcOrder :: !(Maybe Word32),
+    -- | Set the precision in bits of the quantized linear predictor
     -- coefficients, or 0 to let the encoder select it based on the
     -- blocksize. Default value: 'Nothing'.
-  , encoderDoQlpCoeffPrecisionSearch :: !(Maybe Bool)
-    -- ^ Set to 'False' to use only the specified quantized linear predictor
+    encoderQlpCoeffPrecision :: !(Maybe Word32),
+    -- | Set to 'False' to use only the specified quantized linear predictor
     -- coefficient precision, or 'True' to search neighboring precision
     -- values and use the best one. Default value: 'Nothing'.
-  , encoderDoExhaustiveModelSearch :: !(Maybe Bool)
-    -- ^ Set to 'False' to let the encoder estimate the best model order
+    encoderDoQlpCoeffPrecisionSearch :: !(Maybe Bool),
+    -- | Set to 'False' to let the encoder estimate the best model order
     -- based on the residual signal energy, or 'True' to force the encoder
     -- to evaluate all order models and select the best. Default value:
     -- 'Nothing'.
-  , encoderResidualPartitionOrders :: !(Maybe (Word32, Word32))
-    -- ^ Set the minimum and maximum partition order to search when coding
+    encoderDoExhaustiveModelSearch :: !(Maybe Bool),
+    -- | Set the minimum and maximum partition order to search when coding
     -- the residual. The partition order determines the context size in the
     -- residual. The context size will be approximately @blocksize / (2 ^
     -- order)@. Set both min and max values to 0 to force a single context,
@@ -107,26 +105,28 @@ data EncoderSettings = EncoderSettings
     -- Otherwise, set a min and max order, and the encoder will search all
     -- orders, using the mean of each context for its Rice parameter, and
     -- use the best. Default: 'Nothing'.
-  } deriving (Show, Read, Eq, Ord)
+    encoderResidualPartitionOrders :: !(Maybe (Word32, Word32))
+  }
+  deriving (Show, Read, Eq, Ord)
 
 -- | Default 'EncoderSettings'.
 --
 -- @since 0.2.0
-
 defaultEncoderSettings :: EncoderSettings
-defaultEncoderSettings = EncoderSettings
-  { encoderCompression = 5
-  , encoderBlockSize = 0
-  , encoderVerify = False
-  , encoderDoMidSideStereo = Nothing
-  , encoderLooseMidSideStereo = Nothing
-  , encoderApodization = Nothing
-  , encoderMaxLpcOrder = Nothing
-  , encoderQlpCoeffPrecision = Nothing
-  , encoderDoQlpCoeffPrecisionSearch = Nothing
-  , encoderDoExhaustiveModelSearch = Nothing
-  , encoderResidualPartitionOrders = Nothing
-  }
+defaultEncoderSettings =
+  EncoderSettings
+    { encoderCompression = 5,
+      encoderBlockSize = 0,
+      encoderVerify = False,
+      encoderDoMidSideStereo = Nothing,
+      encoderLooseMidSideStereo = Nothing,
+      encoderApodization = Nothing,
+      encoderMaxLpcOrder = Nothing,
+      encoderQlpCoeffPrecision = Nothing,
+      encoderDoQlpCoeffPrecisionSearch = Nothing,
+      encoderDoExhaustiveModelSearch = Nothing,
+      encoderResidualPartitionOrders = Nothing
+    }
 
 -- | Encode a WAVE file or RF64 file to native FLAC.
 --
@@ -140,46 +140,58 @@ defaultEncoderSettings = EncoderSettings
 --     * Number of channels may be only 1–8 inclusive.
 --     * Supported values for bits per sample are 4–24 inclusive.
 --     * Acceptable sample rate lies in the range 1–655350 inclusive.
-
-encodeFlac :: MonadIO m
-  => EncoderSettings   -- ^ Encoder settings
-  -> FilePath          -- ^ File to encode
-  -> FilePath          -- ^ Where to save the resulting FLAC file
-  -> m ()
+encodeFlac ::
+  MonadIO m =>
+  -- | Encoder settings
+  EncoderSettings ->
+  -- | File to encode
+  FilePath ->
+  -- | Where to save the resulting FLAC file
+  FilePath ->
+  m ()
 encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
-  wave  <- readWaveFile ipath
+  wave <- readWaveFile ipath
   case waveSampleFormat wave of
     SampleFormatPcmInt _ -> return ()
     fmt -> throwIO (EncoderInvalidSampleFormat fmt)
-  let channels      = fromIntegral (waveChannels wave)
+  let channels = fromIntegral (waveChannels wave)
       bitsPerSample = fromIntegral (waveBitsPerSample wave)
-      sampleRate    = waveSampleRate wave
-      totalSamples  = waveSamplesTotal wave
-  liftInit (encoderSetChannels      e channels)
+      sampleRate = waveSampleRate wave
+      totalSamples = waveSamplesTotal wave
+  liftInit (encoderSetChannels e channels)
   liftInit (encoderSetBitsPerSample e bitsPerSample)
-  liftInit (encoderSetSampleRate    e sampleRate)
-  liftInit (encoderSetCompression   e encoderCompression)
-  liftInit (encoderSetBlockSize     e encoderBlockSize)
-  liftInit (encoderSetVerify        e encoderVerify)
-  forM_ encoderDoMidSideStereo
+  liftInit (encoderSetSampleRate e sampleRate)
+  liftInit (encoderSetCompression e encoderCompression)
+  liftInit (encoderSetBlockSize e encoderBlockSize)
+  liftInit (encoderSetVerify e encoderVerify)
+  forM_
+    encoderDoMidSideStereo
     (liftInit . encoderSetDoMidSideStereo e)
-  forM_ encoderLooseMidSideStereo
+  forM_
+    encoderLooseMidSideStereo
     (liftInit . encoderSetLooseMidSideStereo e)
-  forM_ encoderApodization
+  forM_
+    encoderApodization
     (liftInit . encoderSetApodization e . renderApodizationSpec)
-  forM_ encoderMaxLpcOrder
+  forM_
+    encoderMaxLpcOrder
     (liftInit . encoderSetMaxLpcOrder e)
-  forM_ encoderQlpCoeffPrecision
+  forM_
+    encoderQlpCoeffPrecision
     (liftInit . encoderSetQlpCoeffPrecision e)
-  forM_ encoderDoQlpCoeffPrecisionSearch
+  forM_
+    encoderDoQlpCoeffPrecisionSearch
     (liftInit . encoderSetDoQlpCoeffPrecisionSearch e)
-  forM_ encoderDoExhaustiveModelSearch
+  forM_
+    encoderDoExhaustiveModelSearch
     (liftInit . encoderSetDoExhaustiveModelSearch e)
-  forM_ encoderResidualPartitionOrders
+  forM_
+    encoderResidualPartitionOrders
     (liftInit . encoderSetMinResidualPartitionOrder e . fst)
-  forM_ encoderResidualPartitionOrders
+  forM_
+    encoderResidualPartitionOrders
     (liftInit . encoderSetMaxResidualPartitionOrder e . snd)
   -- Set the estimate (which is likely correct), to avoid rewrite of
   -- STREAMINFO metadata block after encoding.
@@ -189,10 +201,12 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
     case initStatus of
       EncoderInitStatusOK -> return ()
       status -> throwIO (EncoderInitFailed status)
-    liftBool e $ encoderProcessHelper e
-      (fromIntegral $ waveDataOffset wave)
-      (waveDataSize wave)
-      ipath
+    liftBool e $
+      encoderProcessHelper
+        e
+        (fromIntegral $ waveDataOffset wave)
+        (waveDataSize wave)
+        ipath
     liftBool e (encoderFinish e)
     renameFile otemp opath
 
@@ -202,7 +216,6 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
 -- | Execute an initializing action that returns 'False' on failure and take
 -- care of error reporting. In case of trouble, @'EncoderInitFailed'
 -- 'EncoderInitStatusAlreadyInitialized'@ is thrown.
-
 liftInit :: IO Bool -> IO ()
 liftInit m = liftIO m >>= bool t (return ())
   where
@@ -211,11 +224,9 @@ liftInit m = liftIO m >>= bool t (return ())
 -- | Execute an action that returns 'False' on failure into taking care of
 -- error reporting. In case of trouble @'EncoderFailed'@ with encoder status
 -- attached is thrown.
-
 liftBool :: Encoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
 -- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
-
 throwState :: Encoder -> IO a
 throwState = encoderGetState >=> throwIO . EncoderFailed

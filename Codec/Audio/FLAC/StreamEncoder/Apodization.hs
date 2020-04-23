@@ -11,9 +11,9 @@
 -- needed, and thus should not “contaminate” the
 -- "Codec.Audio.FLAC.StreamEncoder" module with potentially confilcting
 -- names.
-
 module Codec.Audio.FLAC.StreamEncoder.Apodization
-  ( ApodizationFunction (..) )
+  ( ApodizationFunction (..),
+  )
 where
 
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types

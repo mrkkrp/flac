@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 -- |
 -- Module      :  Codec.Audio.FLAC.Util
 -- Copyright   :  © 2016–present Mark Karpov
@@ -8,57 +10,50 @@
 -- Portability :  portable
 --
 -- Random non-public helpers.
-
-{-# LANGUAGE FlexibleContexts #-}
-
 module Codec.Audio.FLAC.Util
-  ( maybePtr
-  , toEnum'
-  , fromEnum'
-  , peekCStringText
-  , withCStringText
-  , withTempFile' )
+  ( maybePtr,
+    toEnum',
+    fromEnum',
+    peekCStringText,
+    withCStringText,
+    withTempFile',
+  )
 where
 
 import Control.Exception
+import qualified Data.ByteString as B
 import Data.Coerce
 import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Foreign
 import Foreign.C.String
 import System.Directory
 import System.FilePath
 import System.IO
-import qualified Data.ByteString    as B
-import qualified Data.Text          as T
-import qualified Data.Text.Encoding as T
 
 -- | Coerce to 'Ptr' and check if it's a null pointer, return 'Nothing' if
 -- it is, otherwise return the given pointer unchanged. Needless to say that
 -- this thing is unsafe.
-
 maybePtr :: Coercible a (Ptr p) => a -> Maybe a
 maybePtr a
   | coerce a == nullPtr = Nothing
-  | otherwise           = Just a
+  | otherwise = Just a
 
 -- | A version of 'toEnum' that converts from any 'Integral' type.
-
 toEnum' :: (Integral a, Enum b) => a -> b
 toEnum' = toEnum . fromIntegral
 
 -- | A version of 'fromEnum' that is polymorphic in return type.
-
 fromEnum' :: (Integral a, Enum b) => b -> a
 fromEnum' = fromIntegral . fromEnum
 
 -- | Peek 'CString' and decode it as UTF-8 encoded value.
-
 peekCStringText :: CString -> IO Text
 peekCStringText = fmap T.decodeUtf8 . B.packCString
 
 -- | Convert a 'Text' value to null-terminated C string that will be freed
 -- automatically. Null bytes are removed from the 'Text' value first.
-
 withCStringText :: Text -> (CString -> IO a) -> IO a
 withCStringText text = B.useAsCString bytes
   where
@@ -67,7 +62,6 @@ withCStringText text = B.useAsCString bytes
 -- | A custom wrapper for creating temporary files in the same directory as
 -- given file. 'Handle' is not opened, you only get 'FilePath' in the
 -- callback.
-
 withTempFile' :: FilePath -> (FilePath -> IO a) -> IO a
 withTempFile' path m = bracketOnError acquire cleanup $
   \(path', h) -> hClose h >> m path'
@@ -76,11 +70,10 @@ withTempFile' path m = bracketOnError acquire cleanup $
     -- NOTE We need ignoringIOErrors in the case exception strikes before we
     -- create the actual file.
     cleanup = ignoringIOErrors . removeFile . fst
-    dir     = takeDirectory path
-    file    = takeFileName  path
+    dir = takeDirectory path
+    file = takeFileName path
 
 -- | Perform specified action ignoring IO exceptions it may throw.
-
 ignoringIOErrors :: IO () -> IO ()
 ignoringIOErrors ioe = ioe `catch` handler
   where

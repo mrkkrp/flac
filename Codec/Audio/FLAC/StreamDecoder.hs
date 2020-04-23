@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- |
 -- Module      :  Codec.Audio.FLAC.StreamDecoder
 -- Copyright   :  © 2016–present Mark Karpov
@@ -25,16 +27,14 @@
 -- Decoding speed is equal to that of @flac@ command line tool. Memory
 -- consumption is minimal and remains constant regardless of the size of
 -- file to decode.
-
-{-# LANGUAGE RecordWildCards #-}
-
 module Codec.Audio.FLAC.StreamDecoder
-  ( DecoderSettings (..)
-  , defaultDecoderSettings
-  , DecoderException (..)
-  , DecoderInitStatus (..)
-  , DecoderState (..)
-  , decodeFlac )
+  ( DecoderSettings (..),
+    defaultDecoderSettings,
+    DecoderException (..),
+    DecoderInitStatus (..),
+    DecoderState (..),
+    decodeFlac,
+  )
 where
 
 import Codec.Audio.FLAC.Metadata
@@ -54,51 +54,55 @@ import System.Directory
 import System.IO
 
 -- | Parameters of the stream decoder.
-
 data DecoderSettings = DecoderSettings
-  { decoderMd5Checking :: !Bool
-    -- ^ If 'True', the decoder will compute the MD5 signature of the
+  { -- | If 'True', the decoder will compute the MD5 signature of the
     -- unencoded audio data while decoding and compare it to the signature
     -- from the STREAMINFO block. Default value: 'False'.
-  , decoderWaveFormat :: !WaveFormat
-    -- ^ This specifies WAVE format in which to save the decoded file. You
+    decoderMd5Checking :: !Bool,
+    -- | This specifies WAVE format in which to save the decoded file. You
     -- can choose between 'WaveVanilla' and 'WaveRF64'; choose the latter if
     -- uncompressed file is expected to be longer than 4 Gb. Default value:
     -- 'WaveVanilla'.
-  } deriving (Show, Read, Eq, Ord)
+    decoderWaveFormat :: !WaveFormat
+  }
+  deriving (Show, Read, Eq, Ord)
 
 -- | Default 'DecoderSettings'.
 --
 -- @since 0.2.0
-
 defaultDecoderSettings :: DecoderSettings
-defaultDecoderSettings = DecoderSettings
-  { decoderMd5Checking = False
-  , decoderWaveFormat  = WaveVanilla
-  }
+defaultDecoderSettings =
+  DecoderSettings
+    { decoderMd5Checking = False,
+      decoderWaveFormat = WaveVanilla
+    }
 
 -- | Decode a FLAC file to WAVE.
 --
 -- 'DecoderException' is thrown when underlying FLAC decoder reports a
 -- problem.
-
-decodeFlac :: MonadIO m
-  => DecoderSettings   -- ^ Decoder settings
-  -> FilePath          -- ^ File to decode
-  -> FilePath          -- ^ Where to save the resulting WAVE file
-  -> m ()
+decodeFlac ::
+  MonadIO m =>
+  -- | Decoder settings
+  DecoderSettings ->
+  -- | File to decode
+  FilePath ->
+  -- | Where to save the resulting WAVE file
+  FilePath ->
+  m ()
 decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
   liftInit (decoderSetMd5Checking d decoderMd5Checking)
   (maxBlockSize, wave) <- runFlacMeta defaultMetaSettings ipath $ do
-    let waveFileFormat   = decoderWaveFormat
-        waveDataOffset   = 0
-        waveDataSize     = 0
-        waveOtherChunks  = []
+    let waveFileFormat = decoderWaveFormat
+        waveDataOffset = 0
+        waveDataSize = 0
+        waveOtherChunks = []
     waveSampleRate <- retrieve SampleRate
-    waveSampleFormat <- SampleFormatPcmInt . fromIntegral
-      <$> retrieve BitsPerSample
+    waveSampleFormat <-
+      SampleFormatPcmInt . fromIntegral
+        <$> retrieve BitsPerSample
     waveChannelMask <- retrieve ChannelMask
     waveSamplesTotal <- retrieve TotalSamples
     maxBlockSize <- fromIntegral <$> retrieve MaxBlockSize
@@ -134,7 +138,6 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
 -- | Execute an initializing action that returns 'False' on failure and take
 -- care of error reporting. In the case of trouble, @'DecoderInitFailed'
 -- 'DecoderInitStatusAlreadyInitialized'@ is thrown.
-
 liftInit :: IO Bool -> IO ()
 liftInit m = liftIO m >>= bool t (return ())
   where
@@ -143,11 +146,9 @@ liftInit m = liftIO m >>= bool t (return ())
 -- | Execute an action that returns 'False' on failure into taking care of
 -- error reporting. In the case of trouble @'EncoderFailed'@ with encoder
 -- status attached is thrown.
-
 liftBool :: Decoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
 -- | Get 'DecoderState' from a given 'Decoder' and throw it immediately.
-
 throwState :: Decoder -> IO a
 throwState = decoderGetState >=> throwIO . DecoderFailed

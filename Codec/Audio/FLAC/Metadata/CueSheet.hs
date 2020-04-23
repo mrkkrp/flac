@@ -10,10 +10,10 @@
 -- This module exports the 'CueSheetData' and 'CueTrack' data types, which
 -- are rarely needed, and thus should not “contaminate” the
 -- "Codec.Audio.Metadata" module with potentially conflicting names.
-
 module Codec.Audio.FLAC.Metadata.CueSheet
-  ( CueSheetData (..)
-  , CueTrack (..) )
+  ( CueSheetData (..),
+    CueTrack (..),
+  )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types

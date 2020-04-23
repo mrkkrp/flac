@@ -8,13 +8,13 @@
 -- Portability :  portable
 --
 -- Mostly non-public stream decoder-specific helper types.
-
 module Codec.Audio.FLAC.StreamDecoder.Internal.Types
-  ( Decoder (..)
-  , DecoderInitStatus (..)
-  , DecoderState (..)
-  , DecoderException (..)
-  , ChannelAssignment (..) )
+  ( Decoder (..),
+    DecoderInitStatus (..),
+    DecoderState (..),
+    DecoderException (..),
+    ChannelAssignment (..),
+  )
 where
 
 import Control.Exception
@@ -23,71 +23,70 @@ import Foreign
 
 -- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent
 -- point to decoder instance.
-
 newtype Decoder = Decoder (Ptr Void)
 
 -- | Status of decoder initialization process.
-
 data DecoderInitStatus
-  = DecoderInitStatusOK
-    -- ^ Initialization was successful.
-  | DecoderInitStatusUnsupportedContainer
-    -- ^ The library was not compiled with support for the given container
+  = -- | Initialization was successful.
+    DecoderInitStatusOK
+  | -- | The library was not compiled with support for the given container
     -- format.
-  | DecoderInitStatusInvalidCallbacks
-    -- ^ A required callback was not supplied.
-  | DecoderInitStatusMemoryAllocationError
-    -- ^ An error occurred allocating memory.
-  | DecoderInitStatusErrorOpeningFile
-    -- ^ fopen() failed.
-  | DecoderInitStatusAlreadyInitialized
-    -- ^ Initialization was attempted on already initialized decoder.
+    DecoderInitStatusUnsupportedContainer
+  | -- | A required callback was not supplied.
+    DecoderInitStatusInvalidCallbacks
+  | -- | An error occurred allocating memory.
+    DecoderInitStatusMemoryAllocationError
+  | -- | fopen() failed.
+    DecoderInitStatusErrorOpeningFile
+  | -- | Initialization was attempted on already initialized decoder.
+    DecoderInitStatusAlreadyInitialized
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 -- | Enumeration of decoder states.
-
 data DecoderState
-  = DecoderStateSearchForMetadata
-    -- ^ The decoder is ready to search for metadata.
-  | DecoderStateReadMetadata
-    -- ^ The decoder is ready to or is in the process of reading metadata.
-  | DecoderStateSearchForFrameSync
-    -- ^ The decoder is ready to or is in the process of searching for the
+  = -- | The decoder is ready to search for metadata.
+    DecoderStateSearchForMetadata
+  | -- | The decoder is ready to or is in the process of reading metadata.
+    DecoderStateReadMetadata
+  | -- | The decoder is ready to or is in the process of searching for the
     -- frame sync code.
-  | DecoderStateReadFrame
-    -- ^ The decoder is ready to or is in the process of reading a frame.
-  | DecoderStateEndOfStream
-    -- ^ The decoder has reached the end of the stream.
-  | DecoderStateOggError
-    -- ^ An error occurred in the underlying Ogg layer.
-  | DecoderStateSeekError
-    -- ^ An error occurred while seeking. The decoder must be flushed or
+    DecoderStateSearchForFrameSync
+  | -- | The decoder is ready to or is in the process of reading a frame.
+    DecoderStateReadFrame
+  | -- | The decoder has reached the end of the stream.
+    DecoderStateEndOfStream
+  | -- | An error occurred in the underlying Ogg layer.
+    DecoderStateOggError
+  | -- | An error occurred while seeking. The decoder must be flushed or
     -- reset before decoding can continue.
-  | DecoderStateAborted
-    -- ^ The decoder was aborted by the read callback.
-  | DecoderStateMemoryAllocationError
-    -- ^ An error occurred allocating memory. The decoder is in an invalid
+    DecoderStateSeekError
+  | -- | The decoder was aborted by the read callback.
+    DecoderStateAborted
+  | -- | An error occurred allocating memory. The decoder is in an invalid
     -- state and can no longer be used.
-  | DecoderStateUnititialized
-    -- ^ The decoder is in the uninitialized state.
+    DecoderStateMemoryAllocationError
+  | -- | The decoder is in the uninitialized state.
+    DecoderStateUnititialized
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 -- | Exception that is thrown when decoding fails for some reason.
-
 data DecoderException
-  = DecoderInitFailed DecoderInitStatus
-    -- ^ Decoder initialization failed.
-  | DecoderFailed DecoderState
-    -- ^ Decoder failed.
+  = -- | Decoder initialization failed.
+    DecoderInitFailed DecoderInitStatus
+  | -- | Decoder failed.
+    DecoderFailed DecoderState
   deriving (Eq, Show, Read)
 
 instance Exception DecoderException
 
 -- | An enumeration of the available channel assignments.
-
 data ChannelAssignment
-  = ChannelAssignmentIndependent -- ^ Independent channels
-  | ChannelAssignmentLeftSide    -- ^ Left+side stereo
-  | ChannelAssignmentRightSide   -- ^ Right+side stereo
-  | ChannelAssignmentMidSide     -- ^ Mid+side stereo
+  = -- | Independent channels
+    ChannelAssignmentIndependent
+  | -- | Left+side stereo
+    ChannelAssignmentLeftSide
+  | -- | Right+side stereo
+    ChannelAssignmentRightSide
+  | -- | Mid+side stereo
+    ChannelAssignmentMidSide
   deriving (Show, Read, Eq, Ord, Bounded, Enum)

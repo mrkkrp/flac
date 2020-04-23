@@ -1,3 +1,5 @@
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 -- |
 -- Module      :  Codec.Audio.FLAC.Metadata.Internal.Object
 -- Copyright   :  © 2016–present Mark Karpov
@@ -10,34 +12,31 @@
 -- Wrappers for the functions to work with metadata objects, see:
 --
 -- <https://xiph.org/flac/api/group__flac__metadata__object.html>.
-
-{-# LANGUAGE ForeignFunctionInterface #-}
-
 module Codec.Audio.FLAC.Metadata.Internal.Object
-  ( objectNew
-  , objectDelete
-  , objectSeektableResizePoints
-  , objectSeektableIsLegal
-  , objectCueSheetResizeTracks
-  , objectCueSheetTrackResizeIndices
-  , objectCueSheetIsLegal
-  , objectPictureSetMimeType
-  , objectPictureSetDescription
-  , objectPictureSetData
-  , objectPictureIsLegal )
+  ( objectNew,
+    objectDelete,
+    objectSeektableResizePoints,
+    objectSeektableIsLegal,
+    objectCueSheetResizeTracks,
+    objectCueSheetTrackResizeIndices,
+    objectCueSheetIsLegal,
+    objectPictureSetMimeType,
+    objectPictureSetDescription,
+    objectPictureSetData,
+    objectPictureIsLegal,
+  )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Types
 import Codec.Audio.FLAC.Util
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Unsafe as B
 import Data.Text (Text)
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-import qualified Data.ByteString.Unsafe as B
 
 -- | Create a new metadata object given its type.
-
 objectNew :: MetadataType -> IO (Maybe Metadata)
 objectNew = fmap maybePtr . c_object_new . fromEnum'
 
@@ -45,7 +44,6 @@ foreign import ccall unsafe "FLAC__metadata_object_new"
   c_object_new :: CUInt -> IO Metadata
 
 -- | Free a metadata object.
-
 objectDelete :: Metadata -> IO ()
 objectDelete = c_object_delete
 
@@ -53,7 +51,6 @@ foreign import ccall unsafe "FLAC__metadata_object_delete"
   c_object_delete :: Metadata -> IO ()
 
 -- | Resize the seekpoint array. In case of trouble return 'False'.
-
 objectSeektableResizePoints :: Metadata -> Word32 -> IO Bool
 objectSeektableResizePoints block newSize =
   c_object_seektable_resize_points block (fromIntegral newSize)
@@ -63,7 +60,6 @@ foreign import ccall unsafe "FLAC__metadata_object_seektable_resize_points"
 
 -- | Check a seek table to see if it conforms to the FLAC specification.
 -- Return 'False' if the seek table is illegal.
-
 objectSeektableIsLegal :: Metadata -> IO Bool
 objectSeektableIsLegal = c_object_seektable_is_legal
 
@@ -71,7 +67,6 @@ foreign import ccall unsafe "FLAC__metadata_object_seektable_is_legal"
   c_object_seektable_is_legal :: Metadata -> IO Bool
 
 -- | Resize the track array.
-
 objectCueSheetResizeTracks :: Metadata -> Word8 -> IO Bool
 objectCueSheetResizeTracks block n =
   c_object_cuesheet_resize_tracks block (fromIntegral n)
@@ -80,7 +75,6 @@ foreign import ccall unsafe "FLAC__metadata_object_cuesheet_resize_tracks"
   c_object_cuesheet_resize_tracks :: Metadata -> CUInt -> IO Bool
 
 -- | Resize a track's index point array.
-
 objectCueSheetTrackResizeIndices :: Metadata -> Word8 -> Word8 -> IO Bool
 objectCueSheetTrackResizeIndices block n i =
   c_object_cuesheet_track_resize_indices block (fromIntegral n) (fromIntegral i)
@@ -91,7 +85,6 @@ foreign import ccall unsafe "FLAC__metadata_object_cuesheet_track_resize_indices
 -- | Check a CUE sheet to see if it conforms to the FLAC specification. If
 -- something is wrong, the explanation is returned in 'Just', otherwise
 -- 'Nothing' is returned.
-
 objectCueSheetIsLegal :: Metadata -> Bool -> IO (Maybe Text)
 objectCueSheetIsLegal block checkCdda = alloca $ \cstrPtr -> do
   res <- c_object_cuesheet_is_legal block checkCdda cstrPtr
@@ -104,7 +97,6 @@ foreign import ccall unsafe "FLAC__metadata_object_cuesheet_is_legal"
 
 -- | Check a picture and return description of what is wrong, otherwise
 -- 'Nothing'.
-
 objectPictureIsLegal :: Metadata -> IO (Maybe Text)
 objectPictureIsLegal block = alloca $ \cstrPtr -> do
   res <- c_object_picture_is_legal block cstrPtr
@@ -116,7 +108,6 @@ foreign import ccall unsafe "FLAC__metadata_object_picture_is_legal"
   c_object_picture_is_legal :: Metadata -> Ptr CString -> IO Bool
 
 -- | Set the MIME type of a given picture block.
-
 objectPictureSetMimeType :: Metadata -> Text -> IO Bool
 objectPictureSetMimeType block mimeType =
   withCStringText mimeType $ \cstr ->
@@ -126,7 +117,6 @@ foreign import ccall unsafe "FLAC__metadata_object_picture_set_mime_type"
   c_object_picture_set_mime_type :: Metadata -> CString -> Bool -> IO Bool
 
 -- | Set the description of a given picture block.
-
 objectPictureSetDescription :: Metadata -> Text -> IO Bool
 objectPictureSetDescription block desc =
   withCStringText desc $ \cstr ->
@@ -136,7 +126,6 @@ foreign import ccall unsafe "FLAC__metadata_object_picture_set_description"
   c_object_picture_set_description :: Metadata -> CString -> Bool -> IO Bool
 
 -- | Set the picture data of a given picture block.
-
 objectPictureSetData :: Metadata -> ByteString -> IO Bool
 objectPictureSetData block data' =
   B.unsafeUseAsCStringLen data' $ \(dataPtr, dataSize) ->

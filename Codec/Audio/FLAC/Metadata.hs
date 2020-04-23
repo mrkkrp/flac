@@ -1,3 +1,11 @@
+{-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 -- |
 -- Module      :  Codec.Audio.FLAC.Metadata
 -- Copyright   :  © 2016–present Mark Karpov
@@ -58,61 +66,56 @@
 -- not possible to choose other interface (such as level 0 and 1). However,
 -- this should not be of any concern to the end-user, as the level 2
 -- supports more functionality than the other levels.
-
-{-# LANGUAGE ConstrainedClassMethods    #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
-
 module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
-    FlacMeta
-  , MetaSettings (..)
-  , defaultMetaSettings
-  , MetaException (..)
-  , MetaChainStatus (..)
-  , runFlacMeta
+    FlacMeta,
+    MetaSettings (..),
+    defaultMetaSettings,
+    MetaException (..),
+    MetaChainStatus (..),
+    runFlacMeta,
+
     -- * Meta values
-  , MetaValue (..)
-  , MinBlockSize (..)
-  , MaxBlockSize (..)
-  , MinFrameSize (..)
-  , MaxFrameSize (..)
-  , SampleRate (..)
-  , Channels (..)
-  , ChannelMask (..)
-  , BitsPerSample (..)
-  , TotalSamples (..)
-  , FileSize (..)
-  , BitRate (..)
-  , MD5Sum (..)
-  , Duration (..)
-  , Application (..)
-  , ApplicationId
-  , mkApplicationId
-  , unApplicationId
-  , SeekTable (..)
-  , SeekPoint (..)
-  , VorbisVendor (..)
-  , VorbisComment (..)
-  , VorbisField (..)
-  , CueSheet (..)
-  , Picture (..)
-  , PictureType (..)
-  , PictureData (..)
+    MetaValue (..),
+    MinBlockSize (..),
+    MaxBlockSize (..),
+    MinFrameSize (..),
+    MaxFrameSize (..),
+    SampleRate (..),
+    Channels (..),
+    ChannelMask (..),
+    BitsPerSample (..),
+    TotalSamples (..),
+    FileSize (..),
+    BitRate (..),
+    MD5Sum (..),
+    Duration (..),
+    Application (..),
+    ApplicationId,
+    mkApplicationId,
+    unApplicationId,
+    SeekTable (..),
+    SeekPoint (..),
+    VorbisVendor (..),
+    VorbisComment (..),
+    VorbisField (..),
+    CueSheet (..),
+    Picture (..),
+    PictureType (..),
+    PictureData (..),
+
     -- * Extra functionality
-  , wipeVorbisComment
-  , wipeApplications
-  , wipeSeekTable
-  , wipeCueSheets
-  , wipePictures
+    wipeVorbisComment,
+    wipeApplications,
+    wipeSeekTable,
+    wipeCueSheets,
+    wipePictures,
+
     -- * Debugging and testing
-  , MetadataType (..)
-  , getMetaChain
-  , isMetaChainModified )
+    MetadataType (..),
+    getMetaChain,
+    isMetaChainModified,
+  )
 where
 
 import Codec.Audio.FLAC.Metadata.Internal.Level2Interface
@@ -126,22 +129,22 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as B8
 import Data.Char (toUpper)
 import Data.IORef
 import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Set (Set)
+import qualified Data.Set as E
 import Data.Text (Text)
 import Data.Vector (Vector)
+import qualified Data.Vector as V
 import Foreign hiding (void)
 import GHC.TypeLits
 import Numeric.Natural
 import System.IO
-import qualified Data.ByteString.Char8 as B8
-import qualified Data.List.NonEmpty    as NE
-import qualified Data.Set              as E
-import qualified Data.Vector           as V
 
 ----------------------------------------------------------------------------
 -- Metadata manipulation API
@@ -149,65 +152,67 @@ import qualified Data.Vector           as V
 -- | An opaque monad for reading and writing of FLAC metadata. The monad is
 -- the home for 'retrieve' and @('=->')@ functions and can be run with
 -- 'runFlacMeta'.
-
-newtype FlacMeta a = FlacMeta { unFlacMeta :: Inner a }
-  deriving ( Functor
-           , Applicative
-           , Monad
-           , MonadIO
-           , MonadThrow
-           , MonadCatch
-           , MonadMask )
+newtype FlacMeta a = FlacMeta {unFlacMeta :: Inner a}
+  deriving
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadIO,
+      MonadThrow,
+      MonadCatch,
+      MonadMask
+    )
 
 -- | A non-public shortcut for the inner monad stack of 'FlacMeta'.
-
 type Inner a = ReaderT Context IO a
 
 -- | The context that 'Inner' passes around.
-
 data Context = Context
-  { metaChain    :: MetaChain     -- ^ Metadata chain
-  , metaModified :: IORef Bool    -- ^ “Modified” flag
-  , metaFileSize :: Natural       -- ^ Size of target file
+  { -- | Metadata chain
+    metaChain :: MetaChain,
+    -- | “Modified” flag
+    metaModified :: IORef Bool,
+    -- | Size of target file
+    metaFileSize :: Natural
   }
 
 -- | Settings that control how metadata is written in FLAC file.
-
 data MetaSettings = MetaSettings
-  { metaAutoVacuum :: !Bool
-    -- ^ Whether to traverse all metadata blocks just before padding sorting
+  { -- | Whether to traverse all metadata blocks just before padding sorting
     -- (if enabled, see 'metaSortPadding') and writing data to a file,
     -- deleting all metadata blocks that appear to be empty, e.g. vorbis
     -- comment block without any comments (tags) in it. Default value:
     -- 'True'.
-  , metaSortPadding :: !Bool
-    -- ^ Whether to attempt to sort and consolidate all padding at the end
+    metaAutoVacuum :: !Bool,
+    -- | Whether to attempt to sort and consolidate all padding at the end
     -- of metadata section. The main purpose of this is that the padding can
     -- be truncated if necessary to get more space so we can overwrite
     -- metadata blocks in place instead of overwriting the entire FLAC file.
     -- Default value: 'True'.
-  , metaUsePadding :: !Bool
-    -- ^ This setting enables truncation of last padding metadata block if
+    metaSortPadding :: !Bool,
+    -- | This setting enables truncation of last padding metadata block if
     -- it allows to overwrite metadata in place instead of overwriting the
     -- entire file. Default value: 'True'.
-  , metaPreserveFileStats :: !Bool
-    -- ^ If 'True', the owner and modification time will be preserved even
+    metaUsePadding :: !Bool,
+    -- | If 'True', the owner and modification time will be preserved even
     -- if a new FLAC file is written (this is for the cases when we need to
     -- write entire FLAC file and thus a copy of the file is written).
     -- Default value: 'True'.
-  } deriving (Show, Read, Eq, Ord)
+    metaPreserveFileStats :: !Bool
+  }
+  deriving (Show, Read, Eq, Ord)
 
 -- | Default 'MetaSettings'.
 --
 -- @since 0.2.0
-
 defaultMetaSettings :: MetaSettings
-defaultMetaSettings = MetaSettings
-  { metaAutoVacuum        = True
-  , metaSortPadding       = True
-  , metaUsePadding        = True
-  , metaPreserveFileStats = True
-  }
+defaultMetaSettings =
+  MetaSettings
+    { metaAutoVacuum = True,
+      metaSortPadding = True,
+      metaUsePadding = True,
+      metaPreserveFileStats = True
+    }
 
 -- | Run an action that manipulates FLAC metadata. 'MetaSettings' control
 -- subtle and rather low-level details of metadata editing, just pass 'def'
@@ -222,18 +227,22 @@ defaultMetaSettings = MetaSettings
 --
 -- If a problem occurs, 'MetaException' is thrown with attached
 -- 'MetaChainStatus' that should help investigating what went wrong.
-
-runFlacMeta :: MonadIO m
-  => MetaSettings      -- ^ Settings to use
-  -> FilePath          -- ^ File to operate on
-  -> FlacMeta a        -- ^ Actions to perform
-  -> m a               -- ^ The result
+runFlacMeta ::
+  MonadIO m =>
+  -- | Settings to use
+  MetaSettings ->
+  -- | File to operate on
+  FilePath ->
+  -- | Actions to perform
+  FlacMeta a ->
+  -- | The result
+  m a
 runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
   metaModified <- newIORef False
   metaFileSize <- fromIntegral <$> withFile path ReadMode hFileSize
   flip runReaderT Context {..} $ do
     liftBool (chainRead metaChain path)
-    result   <- unFlacMeta m
+    result <- unFlacMeta m
     modified <- liftIO (readIORef metaModified)
     when modified $ do
       when metaAutoVacuum applyVacuum
@@ -252,24 +261,19 @@ runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
 -- which is also useful. For example, 'Duration' and 'BitRate' are not read
 -- from FLAC file metadata directly, but defined in terms of other
 -- attributes.
-
 class MetaValue a where
-
   -- | Type of data that corresponds to this metadata value. For example
   -- 'SampleRate' is represented by 'Word32' value in this library, and so
   -- @'MetaType' 'SampleRate' ~ 'Word32'@.
-
   type MetaType a :: Type
 
   -- | Associated type of the kind 'Constraint' that controls whether a
   -- particular piece of metadata is writable or not.
-
   type MetaWritable a :: Constraint
 
   -- | Given value that determines what to read, read it and return. Some
   -- metadata may be missing, in that case the function typically returns a
   -- value wrapped in 'Maybe'.
-
   retrieve :: a -> FlacMeta (MetaType a)
 
   -- | Given a value that determines what to write and a value to write,
@@ -278,7 +282,6 @@ class MetaValue a where
   -- something that /can be missing/, for example you cannot delete the
   -- 'SampleRate' attribute). If 'MetaWritable' is defined, this method must
   -- be defined as well.
-
   (=->) :: MetaWritable a => a -> MetaType a -> FlacMeta ()
   _ =-> _ = error "Codec.Audio.FLAC.Metadata.(=->) is not defined"
 
@@ -289,7 +292,6 @@ type NotWritable = 'Text "This attribute is not writable."
 -- | Minimal block size in samples used in the stream.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data MinBlockSize = MinBlockSize
 
 instance MetaValue MinBlockSize where
@@ -301,7 +303,6 @@ instance MetaValue MinBlockSize where
 -- block size and maximum block size implies a fixed-blocksize stream.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data MaxBlockSize = MaxBlockSize
 
 instance MetaValue MaxBlockSize where
@@ -313,7 +314,6 @@ instance MetaValue MaxBlockSize where
 -- value is not known.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data MinFrameSize = MinFrameSize
 
 instance MetaValue MinFrameSize where
@@ -325,7 +325,6 @@ instance MetaValue MinFrameSize where
 -- value is not known.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data MaxFrameSize = MaxFrameSize
 
 instance MetaValue MaxFrameSize where
@@ -336,7 +335,6 @@ instance MetaValue MaxFrameSize where
 -- | Sample rate in Hz.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data SampleRate = SampleRate
 
 instance MetaValue SampleRate where
@@ -347,7 +345,6 @@ instance MetaValue SampleRate where
 -- | Number of channels. FLAC supports from 1 to 8 channels.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data Channels = Channels
 
 instance MetaValue Channels where
@@ -360,7 +357,6 @@ instance MetaValue Channels where
 -- in the FLAC specification.
 --
 -- __Read-only__ attribute represented as @'Set' 'SpeakerPosition'@.
-
 data ChannelMask = ChannelMask
 
 instance MetaValue ChannelMask where
@@ -373,7 +369,6 @@ instance MetaValue ChannelMask where
 -- bits per sample.
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data BitsPerSample = BitsPerSample
 
 instance MetaValue BitsPerSample where
@@ -387,7 +382,6 @@ instance MetaValue BitsPerSample where
 -- number of total samples is unknown.
 --
 -- __Read-only__ attribute represented as a 'Word64'.
-
 data TotalSamples = TotalSamples
 
 instance MetaValue TotalSamples where
@@ -398,7 +392,6 @@ instance MetaValue TotalSamples where
 -- | File size in bytes.
 --
 -- __Read-only__ attribute represented as a 'Natural'.
-
 data FileSize = FileSize
 
 instance MetaValue FileSize where
@@ -409,7 +402,6 @@ instance MetaValue FileSize where
 -- | Bit rate in kilo-bits per second (kbps).
 --
 -- __Read-only__ attribute represented as a 'Word32'.
-
 data BitRate = BitRate
 
 instance MetaValue BitRate where
@@ -426,7 +418,6 @@ instance MetaValue BitRate where
 -- not result in an invalid bitstream.
 --
 -- __Read-only__ attribute represented as a 'ByteString' of length 16.
-
 data MD5Sum = MD5Sum
 
 instance MetaValue MD5Sum where
@@ -437,7 +428,6 @@ instance MetaValue MD5Sum where
 -- | Duration in seconds.
 --
 -- __Read-only__ attribute represented as a 'Double'.
-
 data Duration = Duration
 
 instance MetaValue Duration where
@@ -445,7 +435,7 @@ instance MetaValue Duration where
   type MetaWritable Duration = TypeError NotWritable
   retrieve Duration = do
     totalSamples <- fromIntegral <$> retrieve TotalSamples
-    sampleRate   <- fromIntegral <$> retrieve SampleRate
+    sampleRate <- fromIntegral <$> retrieve SampleRate
     return (totalSamples / sampleRate)
 
 -- | Application metadata. The 'ApplicationId' argument to 'Application'
@@ -457,7 +447,6 @@ instance MetaValue Duration where
 -- <https://xiph.org/flac/id.html>.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'ByteString'@.
-
 data Application = Application ApplicationId
 
 instance MetaValue Application where
@@ -483,7 +472,6 @@ instance MetaValue Application where
 --
 -- __Writable__ optional attribute represented as a @'Maybe' ('Vector'
 -- 'SeekPoint')@.
-
 data SeekTable = SeekTable
 
 instance MetaValue SeekTable where
@@ -509,7 +497,6 @@ instance MetaValue SeekTable where
 -- detected, see 'metaAutoVacuum').
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
-
 data VorbisVendor = VorbisVendor
 
 instance MetaValue VorbisVendor where
@@ -538,59 +525,80 @@ instance MetaValue VorbisVendor where
 -- fields. The library also supports the standard ReplayGain comments.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
-
 data VorbisComment = VorbisComment VorbisField
 
 -- | Enumeration of all supported filed names to index vorbis comment
 -- entries.
-
 data VorbisField
-  = Title              -- ^ Track\/work name.
-  | Version            -- ^ The version field may be used to differentiate
-                       -- multiple versions of the same track title in a
-                       -- single collection (e.g. remix info).
-  | Album              -- ^ The collection name to which this track belongs.
-  | TrackNumber        -- ^ The track number of this piece if part of a
-                       -- specific larger collection or album.
-  | TrackTotal         -- ^ Total number of tracks in the collection this
-                       -- track belongs to.
-  | DiscNumber         -- ^ Disc number in a multi-disc release.
-  | DiscTotal          -- ^ Total number of discs in a multi-disc release.
-  | Artist             -- ^ The artist generally considered responsible for
-                       -- the work. In popular music this is usually the
-                       -- performing band or singer. For classical music it
-                       -- would be the composer. For an audio book it would
-                       -- be the author of the original text.
-  | Performer          -- ^ The artist(s) who performed the work. In
-                       -- classical music this would be the conductor,
-                       -- orchestra, soloists. In an audio book it would be
-                       -- the actor who did the reading. In popular music
-                       -- this is typically the same as the 'Artist' and is
-                       -- omitted.
-  | Copyright          -- ^ Copyright attribution, e.g., “2001 Nobody's
-                       -- Band” or “1999 Jack Moffitt”.
-  | License            -- ^ License information, e.g., “All Rights
-                       -- Reserved”, “Any Use Permitted”, a URL to a license
-                       -- such as a Creative Commons license or the EFF Open
-                       -- Audio License, etc.
-  | Organization       -- ^ Name of the organization producing the track
-                       -- (i.e. the “record label”).
-  | Description        -- ^ A short text description of the contents.
-  | Genre              -- ^ A short text indication of music genre.
-  | Date               -- ^ Date the track was recorded, usually year.
-  | Location           -- ^ Location where track was recorded.
-  | Contact            -- ^ Contact information for the creators or
-                       -- distributors of the track. This could be a URL, an
-                       -- email address, the physical address of the
-                       -- producing label.
-  | ISRC               -- ^ ISRC number for the track, see
-                       -- <http://isrc.ifpi.org/en>.
-  | Rating             -- ^ Rating, usually mapped as 1–5 stars with actual
-                       -- values “20”, “40”, “60”, “80”, “100” stored.
-  | RGTrackPeak        -- ^ Replay gain track peak, e.g. “0.99996948”.
-  | RGTrackGain        -- ^ Replay gain track gain, e.g. “-7.89 dB”.
-  | RGAlbumPeak        -- ^ Replay gain album peak, e.g. “0.99996948”.
-  | RGAlbumGain        -- ^ Replay gain album gain, e.g. “-7.89 dB”.
+  = -- | Track\/work name.
+    Title
+  | -- | The version field may be used to differentiate
+    -- multiple versions of the same track title in a
+    -- single collection (e.g. remix info).
+    Version
+  | -- | The collection name to which this track belongs.
+    Album
+  | -- | The track number of this piece if part of a
+    -- specific larger collection or album.
+    TrackNumber
+  | -- | Total number of tracks in the collection this
+    -- track belongs to.
+    TrackTotal
+  | -- | Disc number in a multi-disc release.
+    DiscNumber
+  | -- | Total number of discs in a multi-disc release.
+    DiscTotal
+  | -- | The artist generally considered responsible for
+    -- the work. In popular music this is usually the
+    -- performing band or singer. For classical music it
+    -- would be the composer. For an audio book it would
+    -- be the author of the original text.
+    Artist
+  | -- | The artist(s) who performed the work. In
+    -- classical music this would be the conductor,
+    -- orchestra, soloists. In an audio book it would be
+    -- the actor who did the reading. In popular music
+    -- this is typically the same as the 'Artist' and is
+    -- omitted.
+    Performer
+  | -- | Copyright attribution, e.g., “2001 Nobody's
+    -- Band” or “1999 Jack Moffitt”.
+    Copyright
+  | -- | License information, e.g., “All Rights
+    -- Reserved”, “Any Use Permitted”, a URL to a license
+    -- such as a Creative Commons license or the EFF Open
+    -- Audio License, etc.
+    License
+  | -- | Name of the organization producing the track
+    -- (i.e. the “record label”).
+    Organization
+  | -- | A short text description of the contents.
+    Description
+  | -- | A short text indication of music genre.
+    Genre
+  | -- | Date the track was recorded, usually year.
+    Date
+  | -- | Location where track was recorded.
+    Location
+  | -- | Contact information for the creators or
+    -- distributors of the track. This could be a URL, an
+    -- email address, the physical address of the
+    -- producing label.
+    Contact
+  | -- | ISRC number for the track, see
+    -- <http://isrc.ifpi.org/en>.
+    ISRC
+  | -- | Rating, usually mapped as 1–5 stars with actual
+    -- values “20”, “40”, “60”, “80”, “100” stored.
+    Rating
+  | -- | Replay gain track peak, e.g. “0.99996948”.
+    RGTrackPeak
+  | -- | Replay gain track gain, e.g. “-7.89 dB”.
+    RGTrackGain
+  | -- | Replay gain album peak, e.g. “0.99996948”.
+    RGAlbumPeak
+  | -- | Replay gain album gain, e.g. “-7.89 dB”.
+    RGAlbumGain
   deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 instance MetaValue VorbisComment where
@@ -617,7 +625,6 @@ instance MetaValue VorbisComment where
 -- to manipulate 'CueSheetData' and 'CueTrack's.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'CueSheetData'@.
-
 data CueSheet = CueSheet
 
 instance MetaValue CueSheet where
@@ -647,7 +654,6 @@ instance MetaValue CueSheet where
 -- with 'PictureData' easier using the @Juicy-Pixels@ library.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
-
 data Picture = Picture PictureType
 
 instance MetaValue Picture where
@@ -670,7 +676,6 @@ instance MetaValue Picture where
 -- Extra functionality
 
 -- | Delete all “Vorbis comment” metadata blocks.
-
 wipeVorbisComment :: FlacMeta ()
 wipeVorbisComment =
   void . FlacMeta . withMetaBlock VorbisCommentBlock $ \i -> do
@@ -678,7 +683,6 @@ wipeVorbisComment =
     setModified
 
 -- | Delete all “Application” metadata blocks.
-
 wipeApplications :: FlacMeta ()
 wipeApplications =
   void . FlacMeta . withMetaBlock ApplicationBlock $ \i -> do
@@ -686,7 +690,6 @@ wipeApplications =
     setModified
 
 -- | Delete all “Seek table” metadata blocks.
-
 wipeSeekTable :: FlacMeta ()
 wipeSeekTable =
   void . FlacMeta . withMetaBlock SeekTableBlock $ \i -> do
@@ -694,7 +697,6 @@ wipeSeekTable =
     setModified
 
 -- | Delete all “CUE sheet” metadata blocks.
-
 wipeCueSheets :: FlacMeta ()
 wipeCueSheets =
   void . FlacMeta . withMetaBlock CueSheetBlock $ \i -> do
@@ -702,7 +704,6 @@ wipeCueSheets =
     setModified
 
 -- | Delete all “Picture” metadata blocks.
-
 wipePictures :: FlacMeta ()
 wipePictures =
   void . FlacMeta . withMetaBlock PictureBlock $ \i -> do
@@ -714,7 +715,6 @@ wipePictures =
 
 -- | Return a list of all 'MetadataType's of metadata blocks detected in
 -- order.
-
 getMetaChain :: FlacMeta (NonEmpty MetadataType)
 getMetaChain = FlacMeta $ do
   chain <- asks metaChain
@@ -723,7 +723,6 @@ getMetaChain = FlacMeta $ do
 -- | Return 'True' if actions in current 'FlacMeta' context have modified
 -- FLAC metadata. If so, the FLAC file will be updated to reflect these
 -- changes on the way out from the 'FlacMeta' monad.
-
 isMetaChainModified :: FlacMeta Bool
 isMetaChainModified = FlacMeta (asks metaModified >>= liftIO . readIORef)
 
@@ -733,7 +732,6 @@ isMetaChainModified = FlacMeta (asks metaModified >>= liftIO . readIORef)
 -- | A helper that takes a function that extracts something from 'Metadata'
 -- block. It finds the 'StreamInfoBlock', gets 'Metadata' from it and
 -- applies given function to get the final value.
-
 inStreamInfo :: (Metadata -> IO a) -> FlacMeta a
 inStreamInfo f =
   FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
@@ -745,34 +743,40 @@ inStreamInfo f =
 -- was found, 'Nothing' otherwise. If there are several blocks of the given
 -- type, action will be performed for each of them, but only the first
 -- result will be returned.
-
-withMetaBlock
-  :: MetadataType      -- ^ Type of block to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withMetaBlock ::
+  -- | Type of block to find
+  MetadataType ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result in 'Just' if block was found
+  Inner (Maybe a)
 withMetaBlock = withMetaBlockGen noCheck
   where
     noCheck _ = return True
 
 -- | Just like 'withMetaBlock', but creates a new block of requested type if
 -- no block of such type can be found.
-
-withMetaBlock'
-  :: MetadataType      -- ^ Type of block to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner a           -- ^ Result
+withMetaBlock' ::
+  -- | Type of block to find
+  MetadataType ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result
+  Inner a
 withMetaBlock' = withMetaBlockGen' noCheck noSet
   where
     noCheck _ = return True
-    noSet   _ = return ()
+    noSet _ = return ()
 
 -- | The same as 'withMetaBlock' but it searches for a block of type
 -- 'ApplicationBlock' that has specified application id.
-
-withApplicationBlock
-  :: ApplicationId     -- ^ Application id to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withApplicationBlock ::
+  -- | Application id to find
+  ApplicationId ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result in 'Just' if block was found
+  Inner (Maybe a)
 withApplicationBlock givenId =
   withMetaBlockGen idCheck ApplicationBlock
   where
@@ -780,35 +784,41 @@ withApplicationBlock givenId =
 
 -- | Just like 'withApplicationBlock', but creates a new 'ApplicationBlock'
 -- with given id if no such block can be found.
-
-withApplicationBlock'
-  :: ApplicationId     -- ^ Application id to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner a           -- ^ Result
+withApplicationBlock' ::
+  -- | Application id to find
+  ApplicationId ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result
+  Inner a
 withApplicationBlock' givenId =
   withMetaBlockGen' idCheck setId ApplicationBlock
   where
-    idCheck     = fmap (== givenId) . liftIO . getApplicationId
+    idCheck = fmap (== givenId) . liftIO . getApplicationId
     setId block = liftIO (setApplicationId block givenId)
 
 -- | The same as 'withMetaBlock', but it searches for a block of type
 -- 'PictureBlock' that has specific 'PictureType'.
-
-withPictureBlock
-  :: PictureType       -- ^ Picture type to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withPictureBlock ::
+  -- | Picture type to find
+  PictureType ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result in 'Just' if block was found
+  Inner (Maybe a)
 withPictureBlock givenType = withMetaBlockGen typeCheck PictureBlock
   where
     typeCheck = fmap (== givenType) . liftIO . getPictureType
 
 -- | Just like 'withPictureBlock', but creates a new 'PictureBlock' with
 -- given 'PictureType' if no such block can be found.
-
-withPictureBlock'
-  :: PictureType       -- ^ Picture type to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner a           -- ^ Result in 'Just'
+withPictureBlock' ::
+  -- | Picture type to find
+  PictureType ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result in 'Just'
+  Inner a
 withPictureBlock' givenType =
   withMetaBlockGen' typeCheck setType PictureBlock
   where
@@ -816,12 +826,15 @@ withPictureBlock' givenType =
     setType block = liftIO (setPictureType block givenType)
 
 -- | A generic building block for 'withMetaBlock'-like helpers.
-
-withMetaBlockGen
-  :: (Metadata -> Inner Bool) -- ^ Additional check on 'Metadata' block
-  -> MetadataType      -- ^ Type of block to find
-  -> (MetaIterator -> Inner a) -- ^ What to do if such block found
-  -> Inner (Maybe a)   -- ^ Result in 'Just' if block was found
+withMetaBlockGen ::
+  -- | Additional check on 'Metadata' block
+  (Metadata -> Inner Bool) ->
+  -- | Type of block to find
+  MetadataType ->
+  -- | What to do if such block found
+  (MetaIterator -> Inner a) ->
+  -- | Result in 'Just' if block was found
+  Inner (Maybe a)
 withMetaBlockGen check givenType f = do
   chain <- asks metaChain
   fmap listToMaybe . withIterator chain $ \i -> do
@@ -836,20 +849,19 @@ withMetaBlockGen check givenType f = do
       else return Nothing
 
 -- | A generic building block for 'withMetaBlock''-like helpers.
-
-withMetaBlockGen'
-  :: (Metadata -> Inner Bool)
-     -- ^ Additional check on 'Metadata' block
-  -> (Metadata -> Inner ())
-     -- ^ Set parameters of newly created block before calling the main callback
-  -> MetadataType
-     -- ^ Type of block to find
-  -> (MetaIterator -> Inner a)
-     -- ^ What to do if such block found (main callback)
-  -> Inner a
+withMetaBlockGen' ::
+  -- | Additional check on 'Metadata' block
+  (Metadata -> Inner Bool) ->
+  -- | Set parameters of newly created block before calling the main callback
+  (Metadata -> Inner ()) ->
+  -- | Type of block to find
+  MetadataType ->
+  -- | What to do if such block found (main callback)
+  (MetaIterator -> Inner a) ->
+  Inner a
 withMetaBlockGen' check setParam givenType f = do
   chain <- asks metaChain
-  res   <- withMetaBlockGen check givenType f
+  res <- withMetaBlockGen check givenType f
   case res of
     Nothing -> fmap head . withIterator chain $ \i -> do
       actual <- liftIO (iteratorGetBlockType i)
@@ -857,29 +869,27 @@ withMetaBlockGen' check setParam givenType f = do
         then
           let acquire = liftMaybe (objectNew givenType)
               release = liftIO . objectDelete
-          in do
-            bracketOnError acquire release $ \block -> do
-              setParam block
-              liftBool (iteratorInsertBlockAfter i block)
-            Just <$> f i
+           in do
+                bracketOnError acquire release $ \block -> do
+                  setParam block
+                  liftBool (iteratorInsertBlockAfter i block)
+                Just <$> f i
         else return Nothing
     Just x -> return x
 
 -- | Go through all metadata blocks and delete empty ones.
-
 applyVacuum :: Inner ()
 applyVacuum = do
   chain <- asks metaChain
   void . withIterator chain $ \i -> do
     blockType <- liftIO (iteratorGetBlockType i)
-    block     <- liftIO (iteratorGetBlock     i)
-    empty     <- liftIO (isMetaBlockEmpty blockType block)
+    block <- liftIO (iteratorGetBlock i)
+    empty <- liftIO (isMetaBlockEmpty blockType block)
     when empty $
       liftBool (iteratorDeleteBlock i)
     return Nothing
 
 -- | Determine if a given 'Metadata' block is empty.
-
 isMetaBlockEmpty :: MonadIO m => MetadataType -> Metadata -> m Bool
 isMetaBlockEmpty SeekTableBlock block =
   V.null <$> liftIO (getSeekPoints block)
@@ -889,33 +899,28 @@ isMetaBlockEmpty _ _ = return False
 
 -- | Lift an action that may return 'Nothing' on failure into 'Inner' monad
 -- taking care of error reporting.
-
 liftMaybe :: IO (Maybe a) -> Inner a
 liftMaybe m = liftIO m >>= maybe throwStatus return
 
 -- | Lift an action that returns 'False' on failure into 'Inner' monad
 -- taking care of error reporting.
-
 liftBool :: IO Bool -> Inner ()
 liftBool m = liftIO m >>= bool throwStatus (return ())
 
 -- | Get 'MetaChainStatus' and throw it immediately.
-
 throwStatus :: Inner a
 throwStatus = do
-  chain  <- asks metaChain
+  chain <- asks metaChain
   status <- liftIO (chainStatus chain)
   throwM (MetaGeneralProblem status)
 
 -- | Specify that the metadata chain has been modified.
-
 setModified :: Inner ()
 setModified = do
   modified <- asks metaModified
   liftIO (writeIORef modified True)
 
 -- | Map 'VorbisField' to its ASCII name in the form of a 'ByteString'.
-
 vorbisFieldName :: VorbisField -> ByteString
 vorbisFieldName RGTrackPeak = "REPLAYGAIN_TRACK_PEAK"
 vorbisFieldName RGTrackGain = "REPLAYGAIN_TRACK_GAIN"
@@ -925,16 +930,15 @@ vorbisFieldName field = (B8.pack . fmap toUpper . show) field
 
 -- | Map the number of channels to a 'Set' of 'SpeakerPosition's as per FLAC
 -- specification.
-
 toChannelMask :: Word32 -> Set SpeakerPosition
 toChannelMask n = case n of
   0 -> E.empty
   1 -> speakerMono
   2 -> speakerStereo
-  3 -> E.fromList [SpeakerFrontLeft,SpeakerFrontRight,SpeakerFrontCenter]
+  3 -> E.fromList [SpeakerFrontLeft, SpeakerFrontRight, SpeakerFrontCenter]
   4 -> speakerQuad
   5 -> E.insert SpeakerFrontCenter speakerQuad
   6 -> speaker5_1
   7 -> E.insert SpeakerBackCenter speaker5_1Surround
   8 -> speaker7_1Surround
-  x -> E.fromList $ take (fromIntegral x) [minBound..maxBound]
+  x -> E.fromList $ take (fromIntegral x) [minBound .. maxBound]
