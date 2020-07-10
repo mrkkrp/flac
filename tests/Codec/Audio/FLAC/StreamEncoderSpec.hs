@@ -21,32 +21,31 @@ import Test.Hspec
 
 spec :: Spec
 spec =
-  describe "encodeFlac and decodeFlac"
-    $ withVariousWaves
-    $ it "encodes and decodes back correctly"
-    $ \path -> do
-      -- Input and output paths coincide on purpose, we test that nothing
-      -- bad can happen in this case.
-      old <- Blind <$> fetchWaveBody path
-      -- We first let the built-in verification mechanics catch possible
-      -- errors.
-      encodeFlac
-        defaultEncoderSettings
-          { encoderVerify = True
-          }
-        path
-        path
-      -- Then we let decoder check that the streams match with MD5 hash.
-      decodeFlac
-        defaultDecoderSettings
-          { decoderMd5Checking = True
-          }
-        path
-        path
-      -- But we also want to be sure that audio streams match
-      -- byte-by-byte, we can't trust just FLAC's own checking.
-      new <- Blind <$> fetchWaveBody path
-      new `shouldBe` old
+  describe "encodeFlac and decodeFlac" $
+    withVariousWaves $
+      it "encodes and decodes back correctly" $ \path -> do
+        -- Input and output paths coincide on purpose, we test that nothing
+        -- bad can happen in this case.
+        old <- Blind <$> fetchWaveBody path
+        -- We first let the built-in verification mechanics catch possible
+        -- errors.
+        encodeFlac
+          defaultEncoderSettings
+            { encoderVerify = True
+            }
+          path
+          path
+        -- Then we let decoder check that the streams match with MD5 hash.
+        decodeFlac
+          defaultDecoderSettings
+            { decoderMd5Checking = True
+            }
+          path
+          path
+        -- But we also want to be sure that audio streams match
+        -- byte-by-byte, we can't trust just FLAC's own checking.
+        new <- Blind <$> fetchWaveBody path
+        new `shouldBe` old
 
 ----------------------------------------------------------------------------
 -- Helpers

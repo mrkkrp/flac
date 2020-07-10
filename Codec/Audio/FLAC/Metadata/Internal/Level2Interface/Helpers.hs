@@ -74,7 +74,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Foreign as T
-import Data.Vector ((!), Vector)
+import Data.Vector (Vector, (!))
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as VM
 import Data.Word

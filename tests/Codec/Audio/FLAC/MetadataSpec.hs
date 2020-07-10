@@ -25,87 +25,73 @@ import qualified Test.Hspec as Hspec
 
 spec :: Spec
 spec = around withSandbox $ do
-  describe "MinBlockSize"
-    $ it "is read correctly"
-    $ \path ->
+  describe "MinBlockSize" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve MinBlockSize `shouldReturn` 4096
 
-  describe "MaxBlockSize"
-    $ it "is read correctly"
-    $ \path ->
+  describe "MaxBlockSize" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve MaxBlockSize `shouldReturn` 4096
 
-  describe "MinFrameSize"
-    $ it "is read correctly"
-    $ \path ->
+  describe "MinFrameSize" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve MinFrameSize `shouldReturn` 1270
 
-  describe "MaxFrameSize"
-    $ it "is read correctly"
-    $ \path ->
+  describe "MaxFrameSize" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve MaxFrameSize `shouldReturn` 2504
 
-  describe "SampleRate"
-    $ it "is read correctly"
-    $ \path ->
+  describe "SampleRate" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve SampleRate `shouldReturn` 44100
 
-  describe "Channels"
-    $ it "is read correctly"
-    $ \path ->
+  describe "Channels" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve Channels `shouldReturn` 2
 
-  describe "ChannelMask"
-    $ it "is read correctly"
-    $ \path ->
+  describe "ChannelMask" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve ChannelMask `shouldReturn` speakerStereo
 
-  describe "BitsPerSample"
-    $ it "is read correctly"
-    $ \path ->
+  describe "BitsPerSample" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve BitsPerSample `shouldReturn` 16
 
-  describe "TotalSamples"
-    $ it "is read correctly"
-    $ \path ->
+  describe "TotalSamples" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve TotalSamples `shouldReturn` 18304
 
-  describe "FileSize"
-    $ it "is read correctly"
-    $ \path ->
+  describe "FileSize" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve FileSize `shouldReturn` 11459
 
-  describe "BitRate"
-    $ it "is read correctly"
-    $ \path ->
+  describe "BitRate" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve BitRate `shouldReturn` 220
 
-  describe "MD5Sum"
-    $ it "is read correctly"
-    $ \path ->
+  describe "MD5Sum" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve MD5Sum `shouldReturn` refMD5Sum
 
-  describe "Duration"
-    $ it "is read correctly"
-    $ \path ->
+  describe "Duration" $
+    it "is read correctly" $ \path ->
       runFlacMeta def path . checkNoMod $
         retrieve Duration `shouldReturn` 0.41505668934240364
 
-  describe "Application"
-    $ it "is set/read/deleted correctly"
-    $ \path -> do
+  describe "Application" $
+    it "is set/read/deleted correctly" $ \path -> do
       -- Can set application data.
       runFlacMeta def path $ do
         Application "foo" =-> Just "foo"
@@ -164,9 +150,8 @@ spec = around withSandbox $ do
         isMetaChainModified `shouldReturn` True
       runFlacMeta def path . checkNoMod $
         SeekTable =-> Nothing
-    context "when auto-vacuum disabled"
-      $ it "can write empty seek table"
-      $ \path -> do
+    context "when auto-vacuum disabled" $
+      it "can write empty seek table" $ \path -> do
         runFlacMeta def {metaAutoVacuum = False} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
@@ -175,9 +160,8 @@ spec = around withSandbox $ do
           isMetaChainModified `shouldReturn` True
         runFlacMeta def path . checkNoMod $
           retrieve SeekTable `shouldReturn` Just V.empty
-    context "when auto-vacuum enabled"
-      $ it "empty seek table is removed automatically"
-      $ \path -> do
+    context "when auto-vacuum enabled" $
+      it "empty seek table is removed automatically" $ \path -> do
         runFlacMeta def {metaAutoVacuum = True} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
@@ -199,9 +183,8 @@ spec = around withSandbox $ do
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
         retrieve VorbisVendor `shouldReturn` Just "foo"
-    context "when auto-vacuum disabled"
-      $ it "deletion just sets the field to empty string"
-      $ \path -> do
+    context "when auto-vacuum disabled" $
+      it "deletion just sets the field to empty string" $ \path -> do
         runFlacMeta def {metaAutoVacuum = False} path $ do
           VorbisVendor =-> Nothing
           retrieve VorbisVendor `shouldReturn` Just ""
@@ -211,9 +194,8 @@ spec = around withSandbox $ do
         runFlacMeta def path . checkNoMod $
           retrieve VorbisVendor `shouldReturn` Just ""
     context "when auto-vacuum enabled" $ do
-      context "when no other vorbis fields set"
-        $ it "empty vendor causes removal of vorbis vendor block"
-        $ \path -> do
+      context "when no other vorbis fields set" $
+        it "empty vendor causes removal of vorbis vendor block" $ \path -> do
           runFlacMeta def {metaAutoVacuum = True} path $ do
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
@@ -223,9 +205,8 @@ spec = around withSandbox $ do
           runFlacMeta def path . checkNoMod $ do
             retrieve VorbisVendor `shouldReturn` Nothing
             getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
-      context "when other vorbis fields exist"
-        $ it "deletion just sets the field to empty string"
-        $ \path -> do
+      context "when other vorbis fields exist" $
+        it "deletion just sets the field to empty string" $ \path -> do
           runFlacMeta def {metaAutoVacuum = True} path $ do
             VorbisComment Title =-> Just "bobla"
             VorbisVendor =-> Nothing
@@ -259,17 +240,15 @@ spec = around withSandbox $ do
         retrieve (VorbisComment vfield) `shouldReturn` Nothing
 
   describe "CueSheet" $ do
-    context "when the CUE sheet is for a CD"
-      $ it "raises exception when invalid CDDA CUE sheet is given"
-      $ \path -> do
+    context "when the CUE sheet is for a CD" $
+      it "raises exception when invalid CDDA CUE sheet is given" $ \path -> do
         let m =
               runFlacMeta def path $
                 CueSheet =-> Just invalidCueSheet {cueIsCd = True}
             leadInError = "CD-DA cue sheet must have a lead-in length of at least 2 seconds"
         m `shouldThrow` (== MetaInvalidCueSheet leadInError)
-    context "when the CUE sheet is not for a CD"
-      $ it "does not find anything bad in given CUE sheet"
-      $ \path ->
+    context "when the CUE sheet is not for a CD" $
+      it "does not find anything bad in given CUE sheet" $ \path ->
         -- NOTE All other possible issues have been taken care of by the
         -- type system and carefully arranged data type definitions.
         runFlacMeta def path $
@@ -317,9 +296,8 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         Picture ptype =-> Nothing
 
-  describe "wipeVorbisComment"
-    $ it "wipes all “vorbis comment” metadata blocks"
-    $ \path -> do
+  describe "wipeVorbisComment" $
+    it "wipes all “vorbis comment” metadata blocks" $ \path -> do
       runFlacMeta def path $ do
         VorbisComment Title =-> Just "Title"
         VorbisComment Artist =-> Just "Artist"
@@ -330,9 +308,8 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
 
-  describe "wipeApplications"
-    $ it "wipes all “application” metadata blocks"
-    $ \path -> do
+  describe "wipeApplications" $
+    it "wipes all “application” metadata blocks" $ \path -> do
       runFlacMeta def path $ do
         Application "foo" =-> Just "foo"
         Application "bobo" =-> Just "bobo"
@@ -343,9 +320,8 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         getMetaChain `shouldReturn` refChain
 
-  describe "wipeSeekTable"
-    $ it "wipes all “seek table” metadata blocks"
-    $ \path -> do
+  describe "wipeSeekTable" $
+    it "wipes all “seek table” metadata blocks" $ \path -> do
       runFlacMeta def path $
         SeekTable =-> Just testSeekTable
       runFlacMeta def path $ do
@@ -355,9 +331,8 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         getMetaChain `shouldReturn` refChain
 
-  describe "wipeCueSheets"
-    $ it "wipes all “CUE sheet” metadata blocks"
-    $ \path -> do
+  describe "wipeCueSheets" $
+    it "wipes all “CUE sheet” metadata blocks" $ \path -> do
       runFlacMeta def path $
         CueSheet =-> Just testCueSheet
       runFlacMeta def path $ do
@@ -367,9 +342,8 @@ spec = around withSandbox $ do
       runFlacMeta def path . checkNoMod $
         getMetaChain `shouldReturn` refChain
 
-  describe "wipePictures"
-    $ it "wipes all “picture” metadata blocks"
-    $ \path -> do
+  describe "wipePictures" $
+    it "wipes all “picture” metadata blocks" $ \path -> do
       runFlacMeta def path $ do
         Picture PictureFrontCover =-> Just testPicture
         Picture PictureBackCover =-> Just testPicture
