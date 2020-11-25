@@ -29,10 +29,9 @@
 --
 -- > import Codec.Audio.FLAC.Metadata
 -- > import Control.Monad.IO.Class (MonadIO (..))
--- > import Data.Default.Class
 -- >
 -- > main :: IO ()
--- > main = runFlacMeta def "/path/to/my/file.flac" $ do
+-- > main = runFlacMeta defaultMetaSettings "/path/to/my/file.flac" $ do
 -- >   retrieve SampleRate             >>= liftIO . print
 -- >   retrieve (VorbisComment Artist) >>= liftIO . print
 --
@@ -42,10 +41,9 @@
 -- The next example shows how to set a couple of tags:
 --
 -- > import Codec.Audio.FLAC.Metadata
--- > import Data.Default.Class
 -- >
 -- > main :: IO ()
--- > main = runFlacMeta def "/path/to/my/file.flac" $ do
+-- > main = runFlacMeta defaultMetaSettings "/path/to/my/file.flac" $ do
 -- >   VorbisComment Artist =-> Just "Alexander Scriabin"
 -- >   VorbisComment Title  =-> Just "Sonata №9 “Black Mass”, Op. 68"
 -- >   VorbisComment Date   =-> Nothing
