@@ -62,7 +62,7 @@ library
     include-dirs:     cbits
     build-depends:
         base >=4.12 && <5.0,
-        bytestring >=0.2 && <0.11,
+        bytestring >=0.2 && <0.12,
         containers >=0.5 && <0.7,
         directory >=1.2.2 && <1.4,
         exceptions >=0.6 && <0.11,
@@ -96,7 +96,7 @@ test-suite tests
     default-language: Haskell2010
     build-depends:
         base >=4.12 && <5.0,
-        bytestring >=0.2 && <0.11,
+        bytestring >=0.2 && <0.12,
         directory >=1.2.2 && <1.4,
         filepath >=1.2 && <1.5,
         flac -any,
