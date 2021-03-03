@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -81,10 +80,6 @@ import Data.Word
 import Foreign
 import Foreign.C.String
 import Foreign.C.Types
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 ----------------------------------------------------------------------------
 -- Stream info

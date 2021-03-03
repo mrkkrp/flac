@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 -- |
 -- Module      :  Codec.Audio.FLAC.Metadata.Internal.Types
 -- Copyright   :  © 2016–present Mark Karpov
@@ -37,10 +35,6 @@ import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Void
 import Foreign
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 -- | An opaque newtype wrapper around @'Ptr' 'Void'@, serves to represent a
 -- pointer to a metadata chain.
