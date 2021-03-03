@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -28,10 +27,6 @@ import qualified Data.List.NonEmpty as NE
 import Data.Word (Word64)
 import Foreign.C.String
 import Numeric.Natural
-
-#if !MIN_VERSION_base(4,13,0)
-import Data.Semigroup ((<>))
-#endif
 
 -- | Encode given input file, return 'False' in case of failure.
 encoderProcessHelper ::
