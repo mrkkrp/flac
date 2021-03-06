@@ -93,7 +93,7 @@ test-suite tests
         bytestring >=0.2 && <0.12,
         directory >=1.2.2 && <1.4,
         filepath >=1.2 && <1.5,
-        flac -any,
+        flac,
         hspec >=2.0 && <3.0,
         temporary >=1.1 && <1.4,
         transformers >=0.4 && <0.6,
