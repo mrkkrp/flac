@@ -8,8 +8,8 @@
 -- Portability :  portable
 --
 -- This module exports the 'CueSheetData' and 'CueTrack' data types, which
--- are rarely needed, and thus should not “contaminate” the
--- "Codec.Audio.Metadata" module with potentially conflicting names.
+-- are rarely needed, and thus should not congest the "Codec.Audio.Metadata"
+-- module with potentially conflicting names.
 module Codec.Audio.FLAC.Metadata.CueSheet
   ( CueSheetData (..),
     CueTrack (..),

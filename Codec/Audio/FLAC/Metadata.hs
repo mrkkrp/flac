@@ -276,7 +276,7 @@ class MetaValue a where
 
   -- | Given a value that determines what to write and a value to write,
   -- add\/replace a piece of metadata information. This is how you edit
-  -- metadata. To delete something, set it to 'Nothing' (well, it should be
+  -- metadata. To delete something, set it to 'Nothing' (it should be
   -- something that /can be missing/, for example you cannot delete the
   -- 'SampleRate' attribute). If 'MetaWritable' is defined, this method must
   -- be defined as well.
@@ -490,7 +490,7 @@ instance MetaValue SeekTable where
 
 -- | Vorbis “vendor” comment. When “Vorbis Comment” metadata block is
 -- present, the “vendor” entry is always in there, so when you delete it (by
--- @'VorbisVendor' '=->' 'Nothing'@), you really set it to an empty string
+-- @'VorbisVendor' '=->' 'Nothing'@), you really set it to the empty string
 -- (which is enough to trigger auto vacuum feature if no other entries are
 -- detected, see 'metaAutoVacuum').
 --

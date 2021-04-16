@@ -14,8 +14,7 @@
 -- === How to use this module
 --
 -- Just call the 'encodeFlac' function with 'EncoderSettings', input and
--- output file names. The 'encodeFlac' function only encodes vanilla WAVE
--- and RF64.
+-- output file names. The 'encodeFlac' function only encodes WAVE and RF64.
 --
 -- === Low-level details
 --
@@ -214,16 +213,18 @@ encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
 -- Helpers
 
 -- | Execute an initializing action that returns 'False' on failure and take
--- care of error reporting. In case of trouble, @'EncoderInitFailed'
--- 'EncoderInitStatusAlreadyInitialized'@ is thrown.
+-- care of error reporting.
+--
+-- Throws @'EncoderInitFailed' 'EncoderInitStatusAlreadyInitialized'@.
 liftInit :: IO Bool -> IO ()
 liftInit m = liftIO m >>= bool t (return ())
   where
     t = throwIO (EncoderInitFailed EncoderInitStatusAlreadyInitialized)
 
 -- | Execute an action that returns 'False' on failure into taking care of
--- error reporting. In case of trouble @'EncoderFailed'@ with encoder status
--- attached is thrown.
+-- error reporting.
+--
+-- Throws @'EncoderFailed'@.
 liftBool :: Encoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 

@@ -14,11 +14,6 @@ import System.IO
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec
 
--- NOTE OK, we test here a lot of things at the same time, which may
--- disappoint adepts of various testing techniques and principles, but it's
--- easier to test many things simultaneously in this case, and when
--- something is not right, it's usually obvious what's wrong.
-
 spec :: Spec
 spec =
   describe "encodeFlac and decodeFlac" $
@@ -35,7 +30,8 @@ spec =
             }
           path
           path
-        -- Then we let decoder check that the streams match with MD5 hash.
+        -- Then we let decoder check that the streams match with the MD5
+        -- hash.
         decodeFlac
           defaultDecoderSettings
             { decoderMd5Checking = True

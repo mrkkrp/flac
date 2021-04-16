@@ -15,7 +15,7 @@
 -- Wrappers around helpers for working with level 2 FLAC metadata interface.
 --
 -- The functions from this module are not safe, one only should attempt
--- calling them when 'Metadata' contains metadata of correct type.
+-- calling them when 'Metadata' contains metadata of the correct type.
 module Codec.Audio.FLAC.Metadata.Internal.Level2Interface.Helpers
   ( -- * Stream info
     getMinBlockSize,

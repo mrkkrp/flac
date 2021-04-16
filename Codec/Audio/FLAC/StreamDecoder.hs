@@ -14,8 +14,7 @@
 -- === How to use this module
 --
 -- Just call the 'decodeFlac' function with 'DecoderSettings', input and
--- output file names. The 'decodeFlac' function can produce vanilla WAVE and
--- RF64.
+-- output file names. The 'decodeFlac' function can produce WAVE and RF64.
 --
 -- === Low-level details
 --
@@ -136,16 +135,18 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
 -- Helpers
 
 -- | Execute an initializing action that returns 'False' on failure and take
--- care of error reporting. In the case of trouble, @'DecoderInitFailed'
--- 'DecoderInitStatusAlreadyInitialized'@ is thrown.
+-- care of error reporting.
+--
+-- Throws @'DecoderInitFailed' 'DecoderInitStatusAlreadyInitialized'@.
 liftInit :: IO Bool -> IO ()
 liftInit m = liftIO m >>= bool t (return ())
   where
     t = throwIO (DecoderInitFailed DecoderInitStatusAlreadyInitialized)
 
 -- | Execute an action that returns 'False' on failure into taking care of
--- error reporting. In the case of trouble @'EncoderFailed'@ with encoder
--- status attached is thrown.
+-- error reporting.
+--
+-- Throws @'EncoderFailed'@.
 liftBool :: Decoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 

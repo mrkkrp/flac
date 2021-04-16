@@ -34,7 +34,7 @@ import System.IO
 
 -- | Coerce to 'Ptr' and check if it's a null pointer, return 'Nothing' if
 -- it is, otherwise return the given pointer unchanged. Needless to say that
--- this thing is unsafe.
+-- this is unsafe.
 maybePtr :: Coercible a (Ptr p) => a -> Maybe a
 maybePtr a
   | coerce a == nullPtr = Nothing
@@ -52,7 +52,7 @@ fromEnum' = fromIntegral . fromEnum
 peekCStringText :: CString -> IO Text
 peekCStringText = fmap T.decodeUtf8 . B.packCString
 
--- | Convert a 'Text' value to null-terminated C string that will be freed
+-- | Convert a 'Text' value to a null-terminated C string that will be freed
 -- automatically. Null bytes are removed from the 'Text' value first.
 withCStringText :: Text -> (CString -> IO a) -> IO a
 withCStringText text = B.useAsCString bytes
@@ -60,7 +60,7 @@ withCStringText text = B.useAsCString bytes
     bytes = T.encodeUtf8 (T.filter (/= '\0') text)
 
 -- | A custom wrapper for creating temporary files in the same directory as
--- given file. 'Handle' is not opened, you only get 'FilePath' in the
+-- the given file. 'Handle' is not opened, you only get 'FilePath' in the
 -- callback.
 withTempFile' :: FilePath -> (FilePath -> IO a) -> IO a
 withTempFile' path m = bracketOnError acquire cleanup $
@@ -73,7 +73,7 @@ withTempFile' path m = bracketOnError acquire cleanup $
     dir = takeDirectory path
     file = takeFileName path
 
--- | Perform specified action ignoring IO exceptions it may throw.
+-- | Perform the specified action ignoring IO exceptions it may throw.
 ignoringIOErrors :: IO () -> IO ()
 ignoringIOErrors ioe = ioe `catch` handler
   where
