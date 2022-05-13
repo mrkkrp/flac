@@ -96,8 +96,9 @@ spec = around withSandbox $ do
       runFlacMeta def path $ do
         Application "foo" =-> Just "foo"
         Application "bobo" =-> Just "bobo"
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [ApplicationBlock, ApplicationBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [ApplicationBlock, ApplicationBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $ do
@@ -108,15 +109,17 @@ spec = around withSandbox $ do
         Application "foo" =-> Nothing
         retrieve (Application "foo") `shouldReturn` Nothing
         retrieve (Application "bobo") `shouldReturn` Just "bobo"
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [ApplicationBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [ApplicationBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can overwrite application data.
       runFlacMeta def path $ do
         Application "bobo" =-> Just "moon"
         retrieve (Application "bobo") `shouldReturn` Just "moon"
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [ApplicationBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [ApplicationBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can wipe the other one bringing it to the default state.
       runFlacMeta def path $ do
@@ -137,8 +140,9 @@ spec = around withSandbox $ do
       -- Can set seek table if it's correct.
       runFlacMeta def path $ do
         SeekTable =-> Just testSeekTable
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
@@ -155,8 +159,9 @@ spec = around withSandbox $ do
         runFlacMeta def {metaAutoVacuum = False} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
-          getMetaChain `shouldReturn` StreamInfoBlock
-            :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
+          getMetaChain
+            `shouldReturn` StreamInfoBlock
+              :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
           isMetaChainModified `shouldReturn` True
         runFlacMeta def path . checkNoMod $
           retrieve SeekTable `shouldReturn` Just V.empty
@@ -165,8 +170,9 @@ spec = around withSandbox $ do
         runFlacMeta def {metaAutoVacuum = True} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
-          getMetaChain `shouldReturn` StreamInfoBlock
-            :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
+          getMetaChain
+            `shouldReturn` StreamInfoBlock
+              :| [SeekTableBlock, VorbisCommentBlock, PaddingBlock]
           isMetaChainModified `shouldReturn` True
         runFlacMeta def path . checkNoMod $ do
           retrieve SeekTable `shouldReturn` Nothing
@@ -177,8 +183,9 @@ spec = around withSandbox $ do
       -- Can set vorbis vendor.
       runFlacMeta def path $ do
         VorbisVendor =-> Just "foo"
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
@@ -188,8 +195,9 @@ spec = around withSandbox $ do
         runFlacMeta def {metaAutoVacuum = False} path $ do
           VorbisVendor =-> Nothing
           retrieve VorbisVendor `shouldReturn` Just ""
-          getMetaChain `shouldReturn` StreamInfoBlock
-            :| [VorbisCommentBlock, PaddingBlock]
+          getMetaChain
+            `shouldReturn` StreamInfoBlock
+              :| [VorbisCommentBlock, PaddingBlock]
           isMetaChainModified `shouldReturn` True
         runFlacMeta def path . checkNoMod $
           retrieve VorbisVendor `shouldReturn` Just ""
@@ -199,8 +207,9 @@ spec = around withSandbox $ do
           runFlacMeta def {metaAutoVacuum = True} path $ do
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
-            getMetaChain `shouldReturn` StreamInfoBlock
-              :| [VorbisCommentBlock, PaddingBlock]
+            getMetaChain
+              `shouldReturn` StreamInfoBlock
+                :| [VorbisCommentBlock, PaddingBlock]
             isMetaChainModified `shouldReturn` True
           runFlacMeta def path . checkNoMod $ do
             retrieve VorbisVendor `shouldReturn` Nothing
@@ -211,21 +220,24 @@ spec = around withSandbox $ do
             VorbisComment Title =-> Just "bobla"
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
-            getMetaChain `shouldReturn` StreamInfoBlock
-              :| [VorbisCommentBlock, PaddingBlock]
+            getMetaChain
+              `shouldReturn` StreamInfoBlock
+                :| [VorbisCommentBlock, PaddingBlock]
             isMetaChainModified `shouldReturn` True
           runFlacMeta def path . checkNoMod $ do
             retrieve VorbisVendor `shouldReturn` Just ""
-            getMetaChain `shouldReturn` StreamInfoBlock
-              :| [VorbisCommentBlock, PaddingBlock]
+            getMetaChain
+              `shouldReturn` StreamInfoBlock
+                :| [VorbisCommentBlock, PaddingBlock]
 
   describe "VorbisComment" . forM_ [minBound .. maxBound] $ \vfield ->
     it (show vfield ++ " is set/read/deleted correctly") $ \path -> do
       -- Can set vorbis comment.
       runFlacMeta def path $ do
         VorbisComment vfield =-> Just "foo"
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
@@ -257,8 +269,9 @@ spec = around withSandbox $ do
       -- Can set CUE sheet if it's correct.
       runFlacMeta def path $ do
         CueSheet =-> Just testCueSheet
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [CueSheetBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [CueSheetBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
@@ -282,8 +295,9 @@ spec = around withSandbox $ do
       -- Can set a picture.
       runFlacMeta def path $ do
         Picture ptype =-> Just testPicture
-        getMetaChain `shouldReturn` StreamInfoBlock
-          :| [PictureBlock, VorbisCommentBlock, PaddingBlock]
+        getMetaChain
+          `shouldReturn` StreamInfoBlock
+            :| [PictureBlock, VorbisCommentBlock, PaddingBlock]
         isMetaChainModified `shouldReturn` True
       -- Can read it back.
       runFlacMeta def path . checkNoMod $
