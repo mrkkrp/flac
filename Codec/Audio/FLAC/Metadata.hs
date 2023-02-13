@@ -226,7 +226,7 @@ defaultMetaSettings =
 -- If a problem occurs, 'MetaException' is thrown with attached
 -- 'MetaChainStatus' that should help investigating what went wrong.
 runFlacMeta ::
-  MonadIO m =>
+  (MonadIO m) =>
   -- | Settings to use
   MetaSettings ->
   -- | File to operate on
@@ -280,7 +280,7 @@ class MetaValue a where
   -- something that /can be missing/, for example you cannot delete the
   -- 'SampleRate' attribute). If 'MetaWritable' is defined, this method must
   -- be defined as well.
-  (=->) :: MetaWritable a => a -> MetaType a -> FlacMeta ()
+  (=->) :: (MetaWritable a) => a -> MetaType a -> FlacMeta ()
   _ =-> _ = error "Codec.Audio.FLAC.Metadata.(=->) is not defined"
 
 infix 1 =->
@@ -888,7 +888,7 @@ applyVacuum = do
     return Nothing
 
 -- | Determine if a given 'Metadata' block is empty.
-isMetaBlockEmpty :: MonadIO m => MetadataType -> Metadata -> m Bool
+isMetaBlockEmpty :: (MonadIO m) => MetadataType -> Metadata -> m Bool
 isMetaBlockEmpty SeekTableBlock block =
   V.null <$> liftIO (getSeekPoints block)
 isMetaBlockEmpty VorbisCommentBlock block =

@@ -355,7 +355,7 @@ getCueSheetTrack block n = do
       then throwM (MetaInvalidCueSheet "Cannot read CUE track without indices")
       else do
         hasPregap <- c_get_cue_sheet_track_has_pregap_index block n
-        let pregapOne :: Num a => a
+        let pregapOne :: (Num a) => a
             pregapOne = if hasPregap then 1 else 0
             range =
               if numIndices > pregapOne
@@ -441,7 +441,7 @@ setCueSheetTrack block CueTrack {..} n n' = do
     c_set_cue_sheet_track_isrc block n isrcPtr (fromIntegral isrcSize)
   c_set_cue_sheet_track_audio block n cueTrackAudio
   c_set_cue_sheet_track_pre_emphasis block n cueTrackPreEmphasis
-  let pregapOne :: Num a => a
+  let pregapOne :: (Num a) => a
       pregapOne = if isJust cueTrackPregapIndex then 1 else 0
       numIndices = fromIntegral (NE.length cueTrackIndices + pregapOne)
   goodOutcome <- objectCueSheetTrackResizeIndices block n numIndices
