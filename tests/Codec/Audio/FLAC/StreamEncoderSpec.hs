@@ -48,7 +48,7 @@ spec =
 
 newtype Blind a = Blind a
 
-instance Eq a => Eq (Blind a) where
+instance (Eq a) => Eq (Blind a) where
   (Blind x) == (Blind y) = x == y
 
 instance Show (Blind a) where

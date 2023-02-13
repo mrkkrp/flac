@@ -81,7 +81,7 @@ defaultDecoderSettings =
 -- 'DecoderException' is thrown when underlying FLAC decoder reports a
 -- problem.
 decodeFlac ::
-  MonadIO m =>
+  (MonadIO m) =>
   -- | Decoder settings
   DecoderSettings ->
   -- | File to decode

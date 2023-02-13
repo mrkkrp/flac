@@ -140,7 +140,7 @@ defaultEncoderSettings =
 --     * Supported values for bits per sample are 4–24 inclusive.
 --     * Acceptable sample rate lies in the range 1–655350 inclusive.
 encodeFlac ::
-  MonadIO m =>
+  (MonadIO m) =>
   -- | Encoder settings
   EncoderSettings ->
   -- | File to encode
