@@ -32,7 +32,7 @@ jobs:
       - run: sudo apt-get install libflac-dev
       - run: cabal update
       - run: cabal freeze $CONFIG
-      - uses: actions/cache@v3.2.5
+      - uses: actions/cache@v3.3.1
         with:
           path: |
             ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
