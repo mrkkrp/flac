@@ -69,7 +69,7 @@ library
         filepath >=1.2 && <1.5,
         mtl >=2.0 && <3.0,
         text >=0.2 && <2.1,
-        transformers >=0.4 && <0.6,
+        transformers >=0.4 && <0.7,
         vector >=0.10 && <0.14,
         wave >=0.1.2 && <0.3
 
@@ -96,7 +96,7 @@ test-suite tests
         flac,
         hspec >=2.0 && <3.0,
         temporary >=1.1 && <1.4,
-        transformers >=0.4 && <0.6,
+        transformers >=0.4 && <0.7,
         vector >=0.10 && <0.14,
         wave >=0.1.2 && <0.3
 
