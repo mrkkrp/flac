@@ -57,7 +57,7 @@ library
         Codec.Audio.FLAC.StreamEncoder.Internal.Types
         Codec.Audio.FLAC.Util
 
-    default-language: Haskell2010
+    default-language: GHC2021
     extra-libraries:  FLAC
     include-dirs:     cbits
     build-depends:
@@ -87,7 +87,7 @@ test-suite tests
         Codec.Audio.FLAC.MetadataSpec
         Codec.Audio.FLAC.StreamEncoderSpec
 
-    default-language: Haskell2010
+    default-language: GHC2021
     build-depends:
         base >=4.15 && <5.0,
         bytestring >=0.2 && <0.12,

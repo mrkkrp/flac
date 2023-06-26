@@ -65,17 +65,17 @@ import Control.Monad
 import Control.Monad.Catch
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import Data.List (uncons)
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (isJust)
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Foreign as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
+import Data.Text.Foreign qualified as T
 import Data.Vector (Vector, (!))
-import qualified Data.Vector as V
-import qualified Data.Vector.Mutable as VM
+import Data.Vector qualified as V
+import Data.Vector.Mutable qualified as VM
 import Data.Word
 import Foreign
 import Foreign.C.String

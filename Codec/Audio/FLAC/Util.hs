@@ -21,11 +21,11 @@ module Codec.Audio.FLAC.Util
 where
 
 import Control.Exception
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import Data.Coerce
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Foreign
 import Foreign.C.String
 import System.Directory

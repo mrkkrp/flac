@@ -127,18 +127,18 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as B8
+import Data.ByteString.Char8 qualified as B8
 import Data.Char (toUpper)
 import Data.IORef
 import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Set (Set)
-import qualified Data.Set as E
+import Data.Set qualified as E
 import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Vector as V
+import Data.Vector qualified as V
 import Foreign hiding (void)
 import GHC.TypeLits
 import Numeric.Natural

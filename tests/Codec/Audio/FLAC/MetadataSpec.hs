@@ -3,22 +3,22 @@
 module Codec.Audio.FLAC.MetadataSpec (spec) where
 
 import Codec.Audio.FLAC.Metadata hiding (runFlacMeta)
-import qualified Codec.Audio.FLAC.Metadata as Flac
+import Codec.Audio.FLAC.Metadata qualified as Flac
 import Codec.Audio.FLAC.Metadata.CueSheet
 import Codec.Audio.Wave
 import Control.Monad
 import Control.Monad.IO.Class (MonadIO (..))
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Vector (Vector)
-import qualified Data.Vector as V
+import Data.Vector qualified as V
 import System.Directory
 import System.IO
 import System.IO.Temp (withSystemTempFile)
 import Test.Hspec hiding (shouldBe, shouldReturn)
-import qualified Test.Hspec as Hspec
+import Test.Hspec qualified as Hspec
 
 -- TODO How to share the same sandbox between several subsequent tests? This
 -- would allow for more precise labelling.

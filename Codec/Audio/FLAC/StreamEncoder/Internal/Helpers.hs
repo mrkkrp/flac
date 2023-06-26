@@ -19,11 +19,11 @@ where
 
 import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Builder as BU
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Builder qualified as BU
+import Data.ByteString.Lazy qualified as BL
 import Data.List (intersperse)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Word (Word64)
 import Foreign.C.String
 import Numeric.Natural
