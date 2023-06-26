@@ -69,25 +69,24 @@ library
         filepath >=1.2 && <1.5,
         mtl >=2.0 && <3.0,
         text >=0.2 && <2.1,
-        transformers >=0.4 && <0.7,
         vector >=0.10 && <0.14,
         wave >=0.1.2 && <0.3
 
     if flag(dev)
         ghc-options:
-            -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns
-            -Wnoncanonical-monad-instances
+            -Wall -Werror -Wredundant-constraints -Wpartial-fields
+            -Wunused-packages
 
 test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Spec.hs
-    build-tools:      hspec-discover >=2.0 && <3.0
-    hs-source-dirs:   tests
+    type:               exitcode-stdio-1.0
+    main-is:            Spec.hs
+    build-tool-depends: hspec-discover:hspec-discover >=2.0 && <3.0
+    hs-source-dirs:     tests
     other-modules:
         Codec.Audio.FLAC.MetadataSpec
         Codec.Audio.FLAC.StreamEncoderSpec
 
-    default-language: GHC2021
+    default-language:   GHC2021
     build-depends:
         base >=4.15 && <5.0,
         bytestring >=0.2 && <0.12,
@@ -96,12 +95,13 @@ test-suite tests
         flac,
         hspec >=2.0 && <3.0,
         temporary >=1.1 && <1.4,
-        transformers >=0.4 && <0.7,
         vector >=0.10 && <0.14,
         wave >=0.1.2 && <0.3
 
     if flag(dev)
-        ghc-options: -Wall -Werror
+        ghc-options:
+            -Wall -Werror -Wredundant-constraints -Wpartial-fields
+            -Wunused-packages
 
     else
         ghc-options: -Wall
