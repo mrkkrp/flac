@@ -7,7 +7,7 @@ import Codec.Audio.FLAC.StreamEncoder
 import Codec.Audio.Wave
 import Control.Monad
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import System.Directory
 import System.FilePath
 import System.IO

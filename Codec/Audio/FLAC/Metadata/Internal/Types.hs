@@ -28,8 +28,8 @@ where
 
 import Control.Exception (Exception)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
+import Data.ByteString qualified as B
+import Data.ByteString.Char8 qualified as B8
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.String (IsString (..))
 import Data.Text (Text)

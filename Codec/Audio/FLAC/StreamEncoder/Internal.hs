@@ -41,7 +41,7 @@ import Codec.Audio.FLAC.StreamEncoder.Internal.Types
 import Codec.Audio.FLAC.Util
 import Control.Monad.Catch
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
+import Data.ByteString qualified as B
 import Data.Void
 import Foreign
 import Foreign.C.String

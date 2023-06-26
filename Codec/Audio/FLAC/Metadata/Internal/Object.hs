@@ -30,7 +30,7 @@ where
 import Codec.Audio.FLAC.Metadata.Internal.Types
 import Codec.Audio.FLAC.Util
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Unsafe as B
+import Data.ByteString.Unsafe qualified as B
 import Data.Text (Text)
 import Foreign
 import Foreign.C.String
