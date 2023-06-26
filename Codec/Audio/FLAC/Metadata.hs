@@ -123,7 +123,6 @@ import Codec.Audio.FLAC.Metadata.Internal.Types
 import Codec.Audio.Wave
 import Control.Monad
 import Control.Monad.Catch
-import Control.Monad.Except
 import Control.Monad.Reader
 import Data.Bool (bool)
 import Data.ByteString (ByteString)
@@ -141,7 +140,6 @@ import Data.Vector (Vector)
 import Data.Vector qualified as V
 import Foreign hiding (void)
 import GHC.TypeLits
-import Numeric.Natural
 import System.IO
 
 ----------------------------------------------------------------------------
