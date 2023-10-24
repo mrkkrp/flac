@@ -1,6 +1,6 @@
-## Unreleased
+## FLAC 0.2.1
 
-* Dropped support for GHC 8.6 and older.
+* Maintenance release with more modern and minimal dependencies.
 
 ## FLAC 0.2.0
 
