@@ -5,7 +5,7 @@ license:            BSD-3-Clause
 license-file:       LICENSE.md
 maintainer:         Mark Karpov <markkarpov92@gmail.com>
 author:             Mark Karpov <markkarpov92@gmail.com>
-tested-with:        ghc ==9.4.7 ghc ==9.6.3 ghc ==9.8.1
+tested-with:        ghc ==9.6.3 ghc ==9.8.2 ghc ==9.10.1
 homepage:           https://github.com/mrkkrp/flac
 bug-reports:        https://github.com/mrkkrp/flac/issues
 synopsis:           Complete high-level binding to libFLAC
@@ -63,7 +63,7 @@ library
     build-depends:
         base >=4.15 && <5,
         bytestring >=0.2 && <0.13,
-        containers >=0.5 && <0.7,
+        containers >=0.5 && <0.8,
         directory >=1.2.2 && <1.4,
         exceptions >=0.6 && <0.11,
         filepath >=1.2 && <1.5,
