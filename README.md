@@ -4,7 +4,7 @@
 [![Hackage](https://img.shields.io/hackage/v/flac.svg?style=flat)](https://hackage.haskell.org/package/flac)
 [![Stackage Nightly](http://stackage.org/package/flac/badge/nightly)](http://stackage.org/nightly/package/flac)
 [![Stackage LTS](http://stackage.org/package/flac/badge/lts)](http://stackage.org/lts/package/flac)
-![CI](https://github.com/mrkkrp/flac/workflows/CI/badge.svg?branch=master)
+[![CI](https://github.com/mrkkrp/flac/actions/workflows/ci.yaml/badge.svg)](https://github.com/mrkkrp/flac/actions/workflows/ci.yaml)
 
 * [Aims of the project](#aims-of-the-project)
 * [Motivation](#motivation)
