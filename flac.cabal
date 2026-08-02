@@ -75,7 +75,7 @@ library
     if flag(dev)
         ghc-options:
             -Wall -Werror -Wredundant-constraints -Wpartial-fields
-            -Wunused-packages
+            -Wunused-packages -haddock -Winvalid-haddock
 
     if impl(ghc >=9.8)
         ghc-options: -Wno-x-partial
@@ -104,7 +104,7 @@ test-suite tests
     if flag(dev)
         ghc-options:
             -Wall -Werror -Wredundant-constraints -Wpartial-fields
-            -Wunused-packages
+            -Wunused-packages -haddock -Winvalid-haddock
 
     else
         ghc-options: -Wall
