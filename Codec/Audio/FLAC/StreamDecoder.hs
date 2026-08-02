@@ -9,7 +9,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- The module contains a Haskell interface to FLAC stream decoder.
+-- The module contains a Haskell interface to the FLAC stream decoder.
 --
 -- === How to use this module
 --
@@ -23,8 +23,8 @@
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
 -- The binding works with minimal overhead compared to the C implementation.
--- Decoding speed is equal to that of @flac@ command line tool. Memory
--- consumption is minimal and remains constant regardless of the size of
+-- Decoding speed is equal to that of the @flac@ command-line tool. Memory
+-- consumption is minimal and remains constant regardless of the size of the
 -- file to decode.
 module Codec.Audio.FLAC.StreamDecoder
   ( DecoderSettings (..),
@@ -60,7 +60,7 @@ data DecoderSettings = DecoderSettings
     decoderMd5Checking :: !Bool,
     -- | This specifies WAVE format in which to save the decoded file. You
     -- can choose between 'WaveVanilla' and 'WaveRF64'; choose the latter if
-    -- uncompressed file is expected to be longer than 4 Gb. Default value:
+    -- the uncompressed file is expected to be longer than 4 GB. Default value:
     -- 'WaveVanilla'.
     decoderWaveFormat :: !WaveFormat
   }
@@ -78,7 +78,7 @@ defaultDecoderSettings =
 
 -- | Decode a FLAC file to WAVE.
 --
--- 'DecoderException' is thrown when underlying FLAC decoder reports a
+-- 'DecoderException' is thrown when the underlying FLAC decoder reports a
 -- problem.
 decodeFlac ::
   (MonadIO m) =>
@@ -143,12 +143,12 @@ liftInit m = liftIO m >>= bool t (return ())
   where
     t = throwIO (DecoderInitFailed DecoderInitStatusAlreadyInitialized)
 
--- | Execute an action that returns 'False' on failure into taking care of
--- error reporting.
+-- | Execute an action that returns 'False' on failure, taking care of error
+-- reporting.
 --
--- Throws @'EncoderFailed'@.
+-- Throws @'DecoderFailed'@.
 liftBool :: Decoder -> IO Bool -> IO ()
-liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
+liftBool decoder m = liftIO m >>= bool (throwState decoder) (return ())
 
 -- | Get 'DecoderState' from a given 'Decoder' and throw it immediately.
 throwState :: Decoder -> IO a

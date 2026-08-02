@@ -22,7 +22,7 @@
 --
 -- Just like the other modules of this library, the API is file-centered—no
 -- streaming support is available at this time (in libFLAC as well).
--- Retrieving and editing metadata information is very easy, you only need
+-- Retrieving and editing metadata information is very easy; you only need
 -- three functions: 'runFlacMeta', 'retrieve', and @('=->')@.
 --
 -- Here is how to get sample rate and artist name and print them:
@@ -61,9 +61,9 @@
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
 -- This module in particular uses the level 2 metadata interface and it's
--- not possible to choose other interface (such as level 0 and 1). However,
--- this should not be of any concern to the end-user, as the level 2
--- supports more functionality than the other levels.
+-- not possible to choose another interface (such as level 0 or 1). However,
+-- this should not be of any concern to the end-user, as level 2 supports
+-- more functionality than the other levels.
 module Codec.Audio.FLAC.Metadata
   ( -- * Metadata manipulation API
     FlacMeta,
@@ -172,7 +172,7 @@ data Context = Context
     metaFileSize :: Natural
   }
 
--- | Settings that control how metadata is written in FLAC file.
+-- | Settings that control how metadata is written in a FLAC file.
 data MetaSettings = MetaSettings
   { -- | Whether to traverse all metadata blocks just before padding sorting
     -- (if enabled, see 'metaSortPadding') and writing data to a file,
@@ -181,18 +181,18 @@ data MetaSettings = MetaSettings
     -- 'True'.
     metaAutoVacuum :: !Bool,
     -- | Whether to attempt to sort and consolidate all padding at the end
-    -- of metadata section. The main purpose of this is that the padding can
+    -- of the metadata section. The main purpose of this is that the padding can
     -- be truncated if necessary to get more space so we can overwrite
     -- metadata blocks in place instead of overwriting the entire FLAC file.
     -- Default value: 'True'.
     metaSortPadding :: !Bool,
-    -- | This setting enables truncation of last padding metadata block if
-    -- it allows to overwrite metadata in place instead of overwriting the
+    -- | This setting enables truncation of the last padding metadata block
+    -- if it allows overwriting metadata in place instead of overwriting the
     -- entire file. Default value: 'True'.
     metaUsePadding :: !Bool,
     -- | If 'True', the owner and modification time will be preserved even
     -- if a new FLAC file is written (this is for the cases when we need to
-    -- write entire FLAC file and thus a copy of the file is written).
+    -- write the entire FLAC file and thus a copy of the file is written).
     -- Default value: 'True'.
     metaPreserveFileStats :: !Bool
   }
@@ -211,9 +211,10 @@ defaultMetaSettings =
     }
 
 -- | Run an action that manipulates FLAC metadata. 'MetaSettings' control
--- subtle and rather low-level details of metadata editing, just pass 'def'
--- unless you know what you are doing. 'FilePath' specifies location of FLAC
--- file to read\/edit in the file system. 'FlacMeta' is a monadic action
+-- subtle and rather low-level details of metadata editing, just pass
+-- 'defaultMetaSettings' unless you know what you are doing. 'FilePath'
+-- specifies the location of the FLAC file to read\/edit in the file system.
+-- 'FlacMeta' is a monadic action
 -- that describes what to do with the metadata. Compose it from 'retrieve'
 -- and @('=->')@.
 --
@@ -267,7 +268,7 @@ class MetaValue a where
   -- particular piece of metadata is writable or not.
   type MetaWritable a :: Constraint
 
-  -- | Given value that determines what to read, read it and return. Some
+  -- | Given a value that determines what to read, read it and return. Some
   -- metadata may be missing, in that case the function typically returns a
   -- value wrapped in 'Maybe'.
   retrieve :: a -> FlacMeta (MetaType a)
@@ -349,8 +350,8 @@ instance MetaValue Channels where
   retrieve Channels = inStreamInfo getChannels
 
 -- | Channel mask specifying which speaker positions are present. This is
--- inferred from number of channels using channel assignment rules described
--- in the FLAC specification.
+-- inferred from the number of channels using channel assignment rules
+-- described in the FLAC specification.
 --
 -- __Read-only__ attribute represented as @'Set' 'SpeakerPosition'@.
 data ChannelMask = ChannelMask
@@ -372,7 +373,7 @@ instance MetaValue BitsPerSample where
   type MetaWritable BitsPerSample = TypeError NotWritable
   retrieve BitsPerSample = inStreamInfo getBitsPerSample
 
--- | Total number of samples in audio stream. “Samples” means inter-channel
+-- | Total number of samples in the audio stream. “Samples” means inter-channel
 -- sample, i.e. one second of 44.1 KHz audio will have 44100 samples
 -- regardless of the number of channels. A value of zero here means the
 -- number of total samples is unknown.
@@ -523,7 +524,7 @@ instance MetaValue VorbisVendor where
 -- __Writable__ optional attribute represented as a @'Maybe' 'Text'@.
 data VorbisComment = VorbisComment VorbisField
 
--- | Enumeration of all supported filed names to index vorbis comment
+-- | Enumeration of all supported field names to index vorbis comment
 -- entries.
 data VorbisField
   = -- | Track\/work name.
@@ -615,9 +616,10 @@ instance MetaValue VorbisComment where
       setModified
 
 -- | A CUE sheet stored in FLAC metadata. If you try to write an invalid CUE
--- sheet 'MetaException' will be raised with the 'MetaInvalidCueSheet'
--- constructor which includes a 'Text' value with explanation why the CUE
--- sheet was considered invalid. Import "Codec.Audio.FLAC.Metadata.CueSheet"
+-- sheet, 'MetaException' will be raised with the 'MetaInvalidCueSheet'
+-- constructor, which includes a 'Text' value with an explanation of why the
+-- CUE sheet was considered invalid. Import
+-- "Codec.Audio.FLAC.Metadata.CueSheet"
 -- to manipulate 'CueSheetData' and 'CueTrack's.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'CueSheetData'@.
@@ -639,15 +641,16 @@ instance MetaValue CueSheet where
       liftBool (setCueSheetData block cueSheetData)
       setModified
 
--- | Picture embedded in FLAC file. A FLAC file can have several pictures
--- attached to it, you choose which one you want by specifying
--- 'PictureType'. If you try to write an invalid picture 'MetaException'
--- will be raised with 'MetaInvalidPicture' constructor which includes a
--- 'Text' value with explanation why the picture was considered invalid.
+-- | Picture embedded in a FLAC file. A FLAC file can have several pictures
+-- attached to it; you choose which one you want by specifying
+-- 'PictureType'. If you try to write an invalid picture, 'MetaException'
+-- will be raised with the 'MetaInvalidPicture' constructor, which includes a
+-- 'Text' value with an explanation of why the picture was considered
+-- invalid.
 --
 -- Note that the @flac-picture@
--- <https://hackage.haskell.org/package/flac-picture> package allows to work
--- with 'PictureData' easier using the @Juicy-Pixels@ library.
+-- <https://hackage.haskell.org/package/flac-picture> package allows one to
+-- work with 'PictureData' more easily using the @Juicy-Pixels@ library.
 --
 -- __Writable__ optional attribute represented as a @'Maybe' 'PictureData'@.
 data Picture = Picture PictureType
@@ -725,9 +728,9 @@ isMetaChainModified = FlacMeta (asks metaModified >>= liftIO . readIORef)
 ----------------------------------------------------------------------------
 -- Helpers
 
--- | A helper that takes a function that extracts something from 'Metadata'
+-- | A helper that takes a function that extracts something from a 'Metadata'
 -- block. It finds the 'StreamInfoBlock', gets 'Metadata' from it and
--- applies given function to get the final value.
+-- applies the given function to get the final value.
 inStreamInfo :: (Metadata -> IO a) -> FlacMeta a
 inStreamInfo f =
   FlacMeta . fmap fromJust . withMetaBlock StreamInfoBlock $
@@ -735,16 +738,16 @@ inStreamInfo f =
 
 -- | Given 'MetadataType' (type of metadata block) and an action that uses
 -- an iterator which points to a block of the specified type, perform that
--- action and return its result wrapped in 'Just' if block of requested type
--- was found, 'Nothing' otherwise. If there are several blocks of the given
--- type, action will be performed for each of them, but only the first
--- result will be returned.
+-- action and return its result wrapped in 'Just' if a block of the
+-- requested type was found, 'Nothing' otherwise. If there are several blocks
+-- of the given type, the action will be performed for each of them, but only
+-- the first result will be returned.
 withMetaBlock ::
   -- | Type of block to find
   MetadataType ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
-  -- | Result in 'Just' if block was found
+  -- | Result in 'Just' if a block was found
   Inner (Maybe a)
 withMetaBlock = withMetaBlockGen noCheck
   where
@@ -755,7 +758,7 @@ withMetaBlock = withMetaBlockGen noCheck
 withMetaBlock' ::
   -- | Type of block to find
   MetadataType ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
   -- | Result
   Inner a
@@ -765,13 +768,13 @@ withMetaBlock' = withMetaBlockGen' noCheck noSet
     noSet _ = return ()
 
 -- | The same as 'withMetaBlock' but it searches for a block of type
--- 'ApplicationBlock' that has specified application id.
+-- 'ApplicationBlock' that has the specified application id.
 withApplicationBlock ::
   -- | Application id to find
   ApplicationId ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
-  -- | Result in 'Just' if block was found
+  -- | Result in 'Just' if a block was found
   Inner (Maybe a)
 withApplicationBlock givenId =
   withMetaBlockGen idCheck ApplicationBlock
@@ -783,7 +786,7 @@ withApplicationBlock givenId =
 withApplicationBlock' ::
   -- | Application id to find
   ApplicationId ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
   -- | Result
   Inner a
@@ -798,9 +801,9 @@ withApplicationBlock' givenId =
 withPictureBlock ::
   -- | Picture type to find
   PictureType ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
-  -- | Result in 'Just' if block was found
+  -- | Result in 'Just' if a block was found
   Inner (Maybe a)
 withPictureBlock givenType = withMetaBlockGen typeCheck PictureBlock
   where
@@ -811,7 +814,7 @@ withPictureBlock givenType = withMetaBlockGen typeCheck PictureBlock
 withPictureBlock' ::
   -- | Picture type to find
   PictureType ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
   -- | Result in 'Just'
   Inner a
@@ -827,9 +830,9 @@ withMetaBlockGen ::
   (Metadata -> Inner Bool) ->
   -- | Type of block to find
   MetadataType ->
-  -- | What to do if such block found
+  -- | What to do if such a block is found
   (MetaIterator -> Inner a) ->
-  -- | Result in 'Just' if block was found
+  -- | Result in 'Just' if a block was found
   Inner (Maybe a)
 withMetaBlockGen check givenType f = do
   chain <- asks metaChain
@@ -852,7 +855,7 @@ withMetaBlockGen' ::
   (Metadata -> Inner ()) ->
   -- | Type of block to find
   MetadataType ->
-  -- | What to do if such block found (main callback)
+  -- | What to do if such a block is found (main callback)
   (MetaIterator -> Inner a) ->
   Inner a
 withMetaBlockGen' check setParam givenType f = do
@@ -893,12 +896,12 @@ isMetaBlockEmpty VorbisCommentBlock block =
   liftIO (isVorbisCommentEmpty block)
 isMetaBlockEmpty _ _ = return False
 
--- | Lift an action that may return 'Nothing' on failure into 'Inner' monad
--- taking care of error reporting.
+-- | Lift an action that may return 'Nothing' on failure into the 'Inner'
+-- monad, taking care of error reporting.
 liftMaybe :: IO (Maybe a) -> Inner a
 liftMaybe m = liftIO m >>= maybe throwStatus return
 
--- | Lift an action that returns 'False' on failure into 'Inner' monad
+-- | Lift an action that returns 'False' on failure into the 'Inner' monad,
 -- taking care of error reporting.
 liftBool :: IO Bool -> Inner ()
 liftBool m = liftIO m >>= bool throwStatus (return ())

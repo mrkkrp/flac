@@ -16,7 +16,7 @@
 * [License](#license)
 
 This is a complete high-level Haskell binding to
-[libFLAC](https://xiph.org/flac/)—reference FLAC implementation.
+[libFLAC](https://xiph.org/flac/)—the reference FLAC implementation.
 
 > As the maintainer of the C FLAC code base, I must say I'm impressed. Quite
 > honestly, I think the C API is horrible.
@@ -39,7 +39,7 @@ Haskell API to the fast libFLAC library!
 
 Seriously though, we have
 [`htaglib`](https://hackage.haskell.org/package/htaglib) to work with audio
-metadata, but it does not support FLAC-specific thing I would like to
+metadata, but it does not support FLAC-specific things I would like to
 manipulate. We have
 [`hsndfile`](https://hackage.haskell.org/package/hsndfile), but I don't
 really want to read FLAC data into a buffer or Haskell `Vector`. How simple
@@ -77,7 +77,7 @@ Right now there are three main limitations:
 
 The best way to start using `flac` is to take a look at [the
 Haddocks](https://hackage.haskell.org/package/flac). Encoding and decoding
-should be simple to understand, for metadata there are examples in the docs.
+should be simple to understand; for metadata there are examples in the docs.
 Feel free to ask me a question if you get stuck with something.
 
 ## Related packages
@@ -85,7 +85,7 @@ Feel free to ask me a question if you get stuck with something.
 The following packages are designed to be used with `flac`:
 
 * [`flac-picture`](https://hackage.haskell.org/package/flac-picture)—add
-  pictures to FLAC metadata easier.
+  pictures to FLAC metadata more easily.
 
 ## Contribution
 
@@ -98,4 +98,4 @@ Pull requests are also welcome.
 
 Copyright © 2016–present Mark Karpov
 
-Distributed under BSD 3 clause license.
+Distributed under the BSD 3-clause license.

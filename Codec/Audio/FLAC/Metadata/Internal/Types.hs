@@ -186,7 +186,7 @@ data CueSheetData = CueSheetData
     -- the first track, not necessarily to INDEX 01 of the first track; even
     -- the first track may have INDEX 00 data.
     cueLeadIn :: !Word64,
-    -- | 'True' if CUE sheet corresponds to a Compact Disc, else 'False'.
+    -- | 'True' if the CUE sheet corresponds to a Compact Disc, else 'False'.
     cueIsCd :: !Bool,
     -- | Collection of actual tracks in the CUE sheet, see 'CueTrack'.
     cueTracks :: ![CueTrack],
@@ -205,7 +205,7 @@ data CueTrack = CueTrack
     -- samples = 44100 samples\/sec * 1\/75th of a sec).
     cueTrackOffset :: !Word64,
     -- | Track ISRC, empty if not present. This is a 12-digit alphanumeric
-    -- code, the @cue-sheet@ package has corresponding type with smart
+    -- code; the @cue-sheet@ package has a corresponding type with a smart
     -- constructor and validation, but for now we don't want to depend on
     -- that package.
     cueTrackIsrc :: !ByteString,

@@ -9,7 +9,7 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- The module contains a Haskell interface to FLAC stream encoder.
+-- The module contains a Haskell interface to the FLAC stream encoder.
 --
 -- === How to use this module
 --
@@ -23,9 +23,9 @@
 -- libFLAC (released 26 May 2013) installed for the binding to work.
 --
 -- The binding works with minimal overhead compared to the C implementation.
--- Encoding speed is equal to that of @flac@ command line tool. Memory
--- consumption is minimal and remains constant regardless of size of file to
--- decode.
+-- Encoding speed is equal to that of the @flac@ command-line tool. Memory
+-- consumption is minimal and remains constant regardless of the size of the
+-- file to encode.
 module Codec.Audio.FLAC.StreamEncoder
   ( EncoderSettings (..),
     defaultEncoderSettings,
@@ -130,11 +130,12 @@ defaultEncoderSettings =
 -- | Encode a WAVE file or RF64 file to native FLAC.
 --
 -- If the input file is not a valid WAVE file, 'WaveException' will be
--- thrown. 'EncoderException' is thrown when underlying FLAC encoder reports
--- a problem.
+-- thrown. 'EncoderException' is thrown when the underlying FLAC encoder
+-- reports a problem.
 --
--- Please note that there are a number of limitations on parameters of input
--- audio stream (imposed by current reference FLAC implementation):
+-- Please note that there are a number of limitations on the parameters of
+-- the input audio stream (imposed by the current reference FLAC
+-- implementation):
 --
 --     * Number of channels may be only 1–8 inclusive.
 --     * Supported values for bits per sample are 4–24 inclusive.
@@ -221,13 +222,13 @@ liftInit m = liftIO m >>= bool t (return ())
   where
     t = throwIO (EncoderInitFailed EncoderInitStatusAlreadyInitialized)
 
--- | Execute an action that returns 'False' on failure into taking care of
--- error reporting.
+-- | Execute an action that returns 'False' on failure, taking care of error
+-- reporting.
 --
 -- Throws @'EncoderFailed'@.
 liftBool :: Encoder -> IO Bool -> IO ()
 liftBool encoder m = liftIO m >>= bool (throwState encoder) (return ())
 
--- | Get 'EncoderState' from given 'Encoder' and throw it immediately.
+-- | Get 'EncoderState' from a given 'Encoder' and throw it immediately.
 throwState :: Encoder -> IO a
 throwState = encoderGetState >=> throwIO . EncoderFailed

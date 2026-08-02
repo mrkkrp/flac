@@ -9,7 +9,7 @@
 --
 -- This module exports the 'ApodizationFunction' data type, which is rarely
 -- needed, and thus should not “contaminate” the
--- "Codec.Audio.FLAC.StreamEncoder" module with potentially confilcting
+-- "Codec.Audio.FLAC.StreamEncoder" module with potentially conflicting
 -- names.
 module Codec.Audio.FLAC.StreamEncoder.Apodization
   ( ApodizationFunction (..),
