@@ -203,7 +203,7 @@ getSeekPoints block = do
           seekPointSampleNumber <- peekByteOff ptr 0
           seekPointStreamOffset <- peekByteOff ptr 8
           seekPointFrameSamples <- peekByteOff ptr 16
-          VM.write v n SeekPoint {..}
+          VM.write v n SeekPoint{..}
           go (n + 1)
   go 0
   V.unsafeFreeze v
@@ -225,7 +225,7 @@ setSeekPoints block seekPoints = do
       let go n =
             if n < size
               then do
-                let SeekPoint {..} = seekPoints ! fromIntegral n
+                let SeekPoint{..} = seekPoints ! fromIntegral n
                 c_set_seek_point
                   block
                   (fromIntegral n)
@@ -328,7 +328,7 @@ getCueSheetData block = do
         ts <- mapM (getCueSheetTrack block) [0 .. numTracks - 2]
         t' <- getCueSheetTrack block (numTracks - 1)
         return (ts, t')
-  return CueSheetData {..}
+  return CueSheetData{..}
 
 foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_mcn"
   c_get_cue_sheet_mcn :: Metadata -> IO CString
@@ -370,7 +370,7 @@ getCueSheetTrack block n = do
             (c_get_cue_sheet_track_index block n)
             (NE.fromList range)
         return (pregapIndex, trackIndices)
-  return CueTrack {..}
+  return CueTrack{..}
 
 foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_offset"
   c_get_cue_sheet_track_offset :: Metadata -> Word8 -> IO Word64
@@ -395,7 +395,7 @@ foreign import ccall unsafe "FLAC__metadata_get_cue_sheet_track_index"
 
 -- | Set 'CueSheetData' in given 'Metadata' block of type 'CueSheetBlock'.
 setCueSheetData :: Metadata -> CueSheetData -> IO Bool
-setCueSheetData block CueSheetData {..} = do
+setCueSheetData block CueSheetData{..} = do
   B.useAsCStringLen cueCatalog $ \(mcnPtr, mcnSize) ->
     c_set_cue_sheet_mcn block mcnPtr (fromIntegral mcnSize)
   c_set_cue_sheet_lead_in block cueLeadIn
@@ -434,7 +434,7 @@ foreign import ccall unsafe "FLAC__metadata_set_cue_sheet_is_cd"
 
 -- | Poke a 'CueTrack' at a specified index.
 setCueSheetTrack :: Metadata -> CueTrack -> Word8 -> Word8 -> IO Bool
-setCueSheetTrack block CueTrack {..} n n' = do
+setCueSheetTrack block CueTrack{..} n n' = do
   c_set_cue_sheet_track_offset block n cueTrackOffset
   c_set_cue_sheet_track_number block n n'
   B.useAsCStringLen cueTrackIsrc $ \(isrcPtr, isrcSize) ->
@@ -495,7 +495,7 @@ getPictureData block = do
     dataPtr <- c_get_picture_data block dataSizePtr
     dataSize <- fromIntegral <$> peek dataSizePtr
     B.packCStringLen (dataPtr, dataSize)
-  return PictureData {..}
+  return PictureData{..}
 
 foreign import ccall unsafe "FLAC__metadata_get_picture_mime_type"
   c_get_picture_mime_type :: Metadata -> IO CString
@@ -529,7 +529,7 @@ foreign import ccall unsafe "FLAC__metadata_set_picture_type"
 
 -- | Set 'PictureData' in given 'Metadata' block of type 'PictureBlock'.
 setPictureData :: Metadata -> PictureData -> IO Bool
-setPictureData block PictureData {..} = do
+setPictureData block PictureData{..} = do
   c_set_picture_width block pictureWidth
   c_set_picture_height block pictureHeight
   c_set_picture_depth block pictureDepth

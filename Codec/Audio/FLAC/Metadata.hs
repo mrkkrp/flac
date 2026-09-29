@@ -148,7 +148,7 @@ import System.IO
 -- | An opaque monad for reading and writing of FLAC metadata. The monad is
 -- the home for 'retrieve' and @('=->')@ functions and can be run with
 -- 'runFlacMeta'.
-newtype FlacMeta a = FlacMeta {unFlacMeta :: Inner a}
+newtype FlacMeta a = FlacMeta{unFlacMeta :: Inner a}
   deriving
     ( Functor,
       Applicative,
@@ -234,10 +234,10 @@ runFlacMeta ::
   FlacMeta a ->
   -- | The result
   m a
-runFlacMeta MetaSettings {..} path m = liftIO . withChain $ \metaChain -> do
+runFlacMeta MetaSettings{..} path m = liftIO . withChain $ \metaChain -> do
   metaModified <- newIORef False
   metaFileSize <- fromIntegral <$> withFile path ReadMode hFileSize
-  flip runReaderT Context {..} $ do
+  flip runReaderT Context{..} $ do
     liftBool (chainRead metaChain path)
     result <- unFlacMeta m
     modified <- liftIO (readIORef metaModified)

@@ -74,7 +74,7 @@ withSandbox path action =
 -- Needless to say that the body should be relatively short.
 fetchWaveBody :: FilePath -> IO ByteString
 fetchWaveBody path = do
-  Wave {..} <- readWaveFile path
+  Wave{..} <- readWaveFile path
   withBinaryFile path ReadMode $ \h -> do
     hSeek h AbsoluteSeek (fromIntegral waveDataOffset)
     B.hGet h (fromIntegral waveDataSize)

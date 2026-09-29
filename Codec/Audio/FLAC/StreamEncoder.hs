@@ -149,7 +149,7 @@ encodeFlac ::
   -- | Where to save the resulting FLAC file
   FilePath ->
   m ()
-encodeFlac EncoderSettings {..} ipath' opath' = liftIO . withEncoder $ \e -> do
+encodeFlac EncoderSettings{..} ipath' opath' = liftIO . withEncoder $ \e -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
   wave <- readWaveFile ipath

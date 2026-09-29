@@ -89,7 +89,7 @@ decodeFlac ::
   -- | Where to save the resulting WAVE file
   FilePath ->
   m ()
-decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
+decodeFlac DecoderSettings{..} ipath' opath' = liftIO . withDecoder $ \d -> do
   ipath <- makeAbsolute ipath'
   opath <- makeAbsolute opath'
   liftInit (decoderSetMd5Checking d decoderMd5Checking)
@@ -105,7 +105,7 @@ decodeFlac DecoderSettings {..} ipath' opath' = liftIO . withDecoder $ \d -> do
     waveChannelMask <- retrieve ChannelMask
     waveSamplesTotal <- retrieve TotalSamples
     maxBlockSize <- fromIntegral <$> retrieve MaxBlockSize
-    return (maxBlockSize, Wave {..})
+    return (maxBlockSize, Wave{..})
   let bufferSize = maxBlockSize * fromIntegral (waveBlockAlign wave) + 1
   withTempFile' opath $ \otemp ->
     bracket (mallocBytes bufferSize) free $ \buffer -> do

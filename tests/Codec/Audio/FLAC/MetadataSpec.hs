@@ -156,7 +156,7 @@ spec = around withSandbox $ do
         SeekTable =-> Nothing
     context "when auto-vacuum disabled" $
       it "can write empty seek table" $ \path -> do
-        runFlacMeta def {metaAutoVacuum = False} path $ do
+        runFlacMeta def{metaAutoVacuum = False} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain
@@ -167,7 +167,7 @@ spec = around withSandbox $ do
           retrieve SeekTable `shouldReturn` Just V.empty
     context "when auto-vacuum enabled" $
       it "empty seek table is removed automatically" $ \path -> do
-        runFlacMeta def {metaAutoVacuum = True} path $ do
+        runFlacMeta def{metaAutoVacuum = True} path $ do
           SeekTable =-> Just V.empty
           retrieve SeekTable `shouldReturn` Just V.empty
           getMetaChain
@@ -192,7 +192,7 @@ spec = around withSandbox $ do
         retrieve VorbisVendor `shouldReturn` Just "foo"
     context "when auto-vacuum disabled" $
       it "deletion just sets the field to empty string" $ \path -> do
-        runFlacMeta def {metaAutoVacuum = False} path $ do
+        runFlacMeta def{metaAutoVacuum = False} path $ do
           VorbisVendor =-> Nothing
           retrieve VorbisVendor `shouldReturn` Just ""
           getMetaChain
@@ -204,7 +204,7 @@ spec = around withSandbox $ do
     context "when auto-vacuum enabled" $ do
       context "when no other vorbis fields set" $
         it "empty vendor causes removal of vorbis vendor block" $ \path -> do
-          runFlacMeta def {metaAutoVacuum = True} path $ do
+          runFlacMeta def{metaAutoVacuum = True} path $ do
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
             getMetaChain
@@ -216,7 +216,7 @@ spec = around withSandbox $ do
             getMetaChain `shouldReturn` StreamInfoBlock :| [PaddingBlock]
       context "when other vorbis fields exist" $
         it "deletion just sets the field to empty string" $ \path -> do
-          runFlacMeta def {metaAutoVacuum = True} path $ do
+          runFlacMeta def{metaAutoVacuum = True} path $ do
             VorbisComment Title =-> Just "bobla"
             VorbisVendor =-> Nothing
             retrieve VorbisVendor `shouldReturn` Just ""
@@ -256,7 +256,7 @@ spec = around withSandbox $ do
       it "raises exception when invalid CDDA CUE sheet is given" $ \path -> do
         let m =
               runFlacMeta def path $
-                CueSheet =-> Just invalidCueSheet {cueIsCd = True}
+                CueSheet =-> Just invalidCueSheet{cueIsCd = True}
             leadInError = "CD-DA cue sheet must have a lead-in length of at least 2 seconds"
         m `shouldThrow` (== MetaInvalidCueSheet leadInError)
     context "when the CUE sheet is not for a CD" $
@@ -264,7 +264,7 @@ spec = around withSandbox $ do
         -- NOTE All other possible issues have been taken care of by the
         -- type system and carefully arranged data type definitions.
         runFlacMeta def path $
-          CueSheet =-> Just invalidCueSheet {cueIsCd = False}
+          CueSheet =-> Just invalidCueSheet{cueIsCd = False}
     it "is set/read/deleted correctly" $ \path -> do
       -- Can set CUE sheet if it's correct.
       runFlacMeta def path $ do
